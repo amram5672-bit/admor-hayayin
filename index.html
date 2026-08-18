@@ -1204,6 +1204,13 @@ html body .ticket.export-mobile .ticket-main{z-index:2!important}
 html body .ticket.export-mobile:before,
 html body .ticket.export-mobile:after{z-index:1!important}
 html body .ticket.export-mobile .holo{z-index:3!important}
+
+@media(max-width:700px){
+  .history-head{display:block}
+  .history-search{width:100%;height:44px;margin-top:10px;font-size:14px}
+  .table-wrap{margin-top:10px}
+  .history{padding:15px 12px}
+}
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -1336,7 +1343,7 @@ html body .ticket.export-mobile .holo{z-index:3!important}
             <h2>היסטוריית הנפקות</h2>
           </div>
           <div>
-            <input id="historySearch" class="history-search" placeholder="חיפוש לפי שם / מספר..." aria-label="חיפוש בהיסטוריה">
+            <input id="historySearch" class="history-search" placeholder="חיפוש לפי שם רוכש..." aria-label="חיפוש בהיסטוריה">
             <div class="stats" style="margin-top:7px;justify-content:flex-start">
               <span class="stat" id="countStat">0 כרטיסים</span>
               <span class="stat" id="storageStat">שומר במכשיר</span>
@@ -1389,7 +1396,7 @@ const LEGACY_KEYS=['wine_festival_history_v6','wine_festival_history_v5'];
 const COUNTER_KEY='wine_festival_counter_v7';
 const DB_NAME='AdmorHayayinDB';
 const DB_STORE='app';
-const APP_VERSION='8.0.0';
+const APP_VERSION='9.0.0';
 let historyCache=[];
 let dbPromise=null;
 let storageReady=false;
@@ -1415,7 +1422,7 @@ function randomToken(){
 function safeLocalGet(k,f=null){try{const v=localStorage.getItem(k);return v===null?f:v}catch{return f}}
 function safeLocalSet(k,v){try{localStorage.setItem(k,v);return true}catch{return false}}
 function safeLocalRemove(k){try{localStorage.removeItem(k);return true}catch{return false}}
-function openDB(){if(dbPromise)return dbPromise;if(!('indexedDB' in window))return Promise.resolve(null);dbPromise=new Promise(resolve=>{try{const req=indexedDB.open(DB_NAME,3);req.onupgradeneeded=()=>{
+function openDB(){if(dbPromise)return dbPromise;if(!('indexedDB' in window))return Promise.resolve(null);dbPromise=new Promise(resolve=>{try{const req=indexedDB.open(DB_NAME,4);req.onupgradeneeded=()=>{
   const db=req.result;
   if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE);
   if(!db.objectStoreNames.contains('tickets'))db.createObjectStore('tickets');
@@ -1423,37 +1430,124 @@ function openDB(){if(dbPromise)return dbPromise;if(!('indexedDB' in window))retu
 async function idbGet(k){const db=await openDB();if(!db)return null;return new Promise(resolve=>{try{const r=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(k);r.onsuccess=()=>resolve(r.result??null);r.onerror=()=>resolve(null)}catch{resolve(null)}})}
 async function idbSet(k,v){const db=await openDB();if(!db)return false;return new Promise(resolve=>{try{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(v,k);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false)}catch{resolve(false)}})}
 async function idbRemove(k){const db=await openDB();if(!db)return false;return new Promise(resolve=>{try{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(k);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false)}catch{resolve(false)}})}
-function normalizeHistory(list){return (Array.isArray(list)?list:[]).map(x=>({...x,serial:String(x.serial||'').padStart(4,'0'),token:x.token||randomToken(),entered:!!x.entered,enteredAt:x.enteredAt||null,created:x.created||new Date().toISOString(),phone:x.phone||''})).filter(x=>/^\d{4}$/.test(x.serial))}
-function mergeHistories(...lists){const map=new Map();for(const list of lists)for(const x of normalizeHistory(list)){const old=map.get(x.serial);if(!old||new Date(x.created)>new Date(old.created))map.set(x.serial,x)}return [...map.values()].sort((a,b)=>new Date(b.created)-new Date(a.created)).slice(0,1000)}
+
+function normalizeHistory(list){
+  return (Array.isArray(list)?list:[])
+    .map(x=>({
+      ...x,
+      serial:String(x.serial||'').padStart(4,'0'),
+      token:x.token||randomToken(),
+      entered:!!x.entered,
+      enteredAt:x.enteredAt||null,
+      created:x.created||new Date().toISOString(),
+      phone:x.phone||''
+    }))
+    .filter(x=>/^\d{4}$/.test(x.serial));
+}
+function mergeHistories(...lists){
+  const map=new Map();
+  for(const list of lists){
+    for(const x of normalizeHistory(list)){
+      const old=map.get(x.serial);
+      // Prefer the most complete/latest copy. Never discard a ticket merely
+      // because it is older than another ticket with a different serial.
+      if(!old || new Date(x.created)>=new Date(old.created)) map.set(x.serial,x);
+    }
+  }
+  return [...map.values()].sort((a,b)=>new Date(b.created)-new Date(a.created));
+}
 function getHistory(){return historyCache.slice()}
+
+async function getAllTicketsFromDB(){
+  const db=await openDB();
+  if(!db || !db.objectStoreNames.contains('tickets')) return [];
+  return new Promise(resolve=>{
+    try{
+      const req=db.transaction('tickets','readonly').objectStore('tickets').getAll();
+      req.onsuccess=()=>resolve(req.result||[]);
+      req.onerror=()=>resolve([]);
+    }catch{resolve([])}
+  });
+}
+async function putTicketDB(ticket){
+  const db=await openDB();
+  if(!db || !db.objectStoreNames.contains('tickets')) return false;
+  return new Promise(resolve=>{
+    try{
+      const tx=db.transaction('tickets','readwrite');
+      tx.objectStore('tickets').put(ticket,ticket.serial);
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>resolve(false);
+      tx.onabort=()=>resolve(false);
+    }catch{resolve(false)}
+  });
+}
+async function deleteTicketDB(serial){
+  const db=await openDB();
+  if(!db || !db.objectStoreNames.contains('tickets')) return false;
+  return new Promise(resolve=>{
+    try{
+      const tx=db.transaction('tickets','readwrite');
+      tx.objectStore('tickets').delete(serial);
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>resolve(false);
+      tx.onabort=()=>resolve(false);
+    }catch{resolve(false)}
+  });
+}
+async function clearTicketsDB(){
+  const db=await openDB();
+  if(!db || !db.objectStoreNames.contains('tickets')) return false;
+  return new Promise(resolve=>{
+    try{
+      const tx=db.transaction('tickets','readwrite');
+      tx.objectStore('tickets').clear();
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=()=>resolve(false);
+      tx.onabort=()=>resolve(false);
+    }catch{resolve(false)}
+  });
+}
 async function persistHistory(list){
   const normalized=mergeHistories(list);
-  historyCache=normalized.slice(0,1000);
-  const json=JSON.stringify(historyCache);
-  const localOK=safeLocalSet(HISTORY_KEY,json);
+  historyCache=normalized;
+  // IndexedDB stores EVERY ticket individually. There is deliberately no
+  // 2-ticket/1000-ticket slice and no aggregate-record dependency.
   let idbOK=false;
   try{
-    idbOK=await idbSet(HISTORY_KEY,historyCache);
-    // Also store every ticket separately in a dedicated object store when available.
-    const db=await openDB();
-    if(db && db.objectStoreNames.contains('tickets')){
-      await new Promise(resolve=>{
-        try{
-          const tx=db.transaction('tickets','readwrite');
-          const store=tx.objectStore('tickets');
-          for(const ticket of historyCache) store.put(ticket,ticket.serial);
-          tx.oncomplete=()=>resolve();
-          tx.onerror=()=>resolve();
-          tx.onabort=()=>resolve();
-        }catch{resolve()}
-      });
-    }
+    for(const ticket of historyCache) await putTicketDB(ticket);
+    idbOK=historyCache.length===0 || (await getAllTicketsFromDB()).length>=historyCache.length;
   }catch{}
-  $('storageStat').textContent=(localOK||idbOK)?'✓ נשמר במכשיר':'⚠ לא ניתן לשמור';
-  return localOK||idbOK;
+  // Keep a localStorage backup for compatibility, but IndexedDB remains the
+  // authoritative unlimited store.
+  const localOK=safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
+  $('storageStat').textContent=(idbOK||localOK)?'✓ נשמר במכשיר':'⚠ לא ניתן לשמור';
+  return idbOK||localOK;
+}
+async function persistOneTicket(ticket){
+  const normalized=normalizeHistory([ticket])[0];
+  if(!normalized)return false;
+  const ok=await putTicketDB(normalized);
+  if(ok){
+    historyCache=mergeHistories([normalized],historyCache);
+    safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
+    $('storageStat').textContent='✓ נשמר במכשיר';
+    return true;
+  }
+  // Fallback if IndexedDB is unavailable.
+  historyCache=mergeHistories([normalized],historyCache);
+  const localOK=safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
+  $('storageStat').textContent=localOK?'✓ נשמר במכשיר':'⚠ לא ניתן לשמור';
+  return localOK;
 }
 async function hydrateStorage(){
   let lists=[];
+  // First load the unlimited per-ticket database.
+  try{
+    const rows=await getAllTicketsFromDB();
+    if(rows.length) lists.push(rows);
+  }catch{}
+  // Then migrate old aggregate stores / legacy versions if present.
   try{
     const raw=safeLocalGet(HISTORY_KEY,'[]');
     if(raw)lists.push(JSON.parse(raw));
@@ -1468,26 +1562,35 @@ async function hydrateStorage(){
     const indexed=await idbGet(HISTORY_KEY);
     if(indexed)lists.push(indexed);
   }catch{}
-  try{
-    const db=await openDB();
-    if(db && db.objectStoreNames.contains('tickets')){
-      const rows=await new Promise(resolve=>{
-        try{
-          const req=db.transaction('tickets','readonly').objectStore('tickets').getAll();
-          req.onsuccess=()=>resolve(req.result||[]);
-          req.onerror=()=>resolve([]);
-        }catch{resolve([])}
-      });
-      if(rows.length)lists.push(rows);
-    }
-  }catch{}
+
   historyCache=mergeHistories(...lists);
-  await persistHistory(historyCache);
+
+  // Migrate every recovered ticket into its own IndexedDB record.
+  try{
+    for(const ticket of historyCache) await putTicketDB(ticket);
+  }catch{}
+
+  // Backup the complete list. No slice.
+  safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
   storageReady=true;
   renderHistory();
   updateCount();
   return historyCache;
 }
+function nextSerial(){
+  const used=new Set(historyCache.map(x=>Number(x.serial)));
+  let n=Number(safeLocalGet(COUNTER_KEY,'0'))||0;
+  if(n<0)n=0;
+  do{
+    n++;
+    if(n>9999)n=1;
+  }while(used.has(n));
+  safeLocalSet(COUNTER_KEY,String(n));
+  return String(n).padStart(4,'0');
+}
+function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
+function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
+async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
 function nextSerial(){const used=new Set(historyCache.map(x=>Number(x.serial)));let n=Number(safeLocalGet(COUNTER_KEY,'0'))||0;while(used.has(n+1))n++;n++;if(n>9999)n=1;while(used.has(n))n++;safeLocalSet(COUNTER_KEY,String(n));return String(n).padStart(4,'0')}
 function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
 function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
@@ -1548,6 +1651,7 @@ function makeQR(){
     box.textContent='QR';
   }
 }
+
 async function saveTicket(){
   if(!storageReady){
     status('המערכת עדיין טוענת את ההיסטוריה. נסה שוב בעוד רגע.',true);
@@ -1560,20 +1664,18 @@ async function saveTicket(){
     return;
   }
 
-  // A fresh form always receives a new serial. Loading an existing ticket is the
-  // only way to edit an existing serial.
+  // Every click on "הנפק" from a fresh form creates a NEW ticket.
+  // Only an explicit "טען" from history can update an existing ticket.
   let serial=d.serial;
-  const alreadyExists=historyCache.some(x=>x.serial===serial);
-  if(draftPending || !editingSerial || (alreadyExists && editingSerial!==serial)){
+  const exists=historyCache.some(x=>x.serial===serial);
+  const isNew=(!editingSerial || draftPending || !exists || editingSerial!==serial);
+
+  if(isNew){
     serial=nextSerial();
-    $('serial').value=serial;
     d.serial=serial;
     d.token=randomToken();
-    $('ticketToken').value=d.token;
-  }else if(!/^\d{4}$/.test(serial)){
-    serial=nextSerial();
     $('serial').value=serial;
-    d.serial=serial;
+    $('ticketToken').value=d.token;
   }
 
   const old=historyCache.find(x=>x.serial===serial);
@@ -1586,11 +1688,7 @@ async function saveTicket(){
     enteredAt:old?.enteredAt||null
   };
 
-  const next=old
-    ? historyCache.map(x=>x.serial===serial?item:x)
-    : [item,...historyCache];
-
-  const ok=await persistHistory(next);
+  const ok=await persistOneTicket(item);
   if(ok){
     draftPending=false;
     editingSerial=serial;
@@ -1599,8 +1697,8 @@ async function saveTicket(){
     renderHistory();
     updateCount();
     makeQR();
-    status('✓ הכרטיס נשמר בהיסטוריה');
-    toast('הכרטיס נוסף להיסטוריה');
+    status('✓ הכרטיס נשמר בהיסטוריה · סה״כ '+historyCache.length+' כרטיסים');
+    toast('הכרטיס '+serial+' נוסף להיסטוריה');
   }else{
     status('⚠ הכרטיס הוצג אך השמירה נכשלה',true);
     toast('השמירה נכשלה');
@@ -1618,7 +1716,14 @@ function loadTicketBySerial(serial){
   status(x.entered?'הכרטיס נטען · כבר סומן כנכנס':'הכרטיס נטען לעריכה');
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function loadTicket(i){const h=getFilteredHistory(),x=h[i];if(x)loadTicketBySerial(x.serial)}
+function loadTicketBySerialForEdit(serial){
+  const x=historyCache.find(t=>t.serial===serial);
+  if(x) loadTicketBySerial(serial);
+}
+function loadTicket(i){
+  const h=getFilteredHistory(),x=h[i];
+  if(x)loadTicketBySerial(x.serial);
+}
 function duplicateTicket(i){
   const h=getFilteredHistory(),x=h[i];
   if(!x)return;
@@ -1632,12 +1737,68 @@ function duplicateTicket(i){
   status('נוצר כרטיס חדש עם מספר סידורי חדש');
   focusName();
 }
-async function deleteTicket(serial){if(!confirm('למחוק את הכרטיס '+serial+' מההיסטוריה?'))return;await persistHistory(historyCache.filter(x=>x.serial!==serial));renderHistory();updateCount();toast('הכרטיס נמחק')}
-async function clearHistory(){if(!historyCache.length)return;if(confirm('למחוק את כל היסטוריית ההנפקות?')){historyCache=[];safeLocalRemove(HISTORY_KEY);await idbRemove(HISTORY_KEY);safeLocalSet(COUNTER_KEY,'0');renderHistory();updateCount();status('ההיסטוריה נמחקה')}}
-function getFilteredHistory(){const q=($('historySearch').value||'').trim().toLowerCase();if(!q)return historyCache.slice();return historyCache.filter(x=>[x.name,x.phone,x.serial,x.type,x.entered?'נכנס':'טרם נכנס'].join(' ').toLowerCase().includes(q))}
-function updateCount(){$('countStat').textContent=historyCache.length+' כרטיסים'}
-function formatDate(iso){if(!iso)return'—';try{return new Intl.DateTimeFormat('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso))}catch{return'—'}}
-function renderHistory(){const h=getFilteredHistory();updateCount();$('historyBody').innerHTML=h.length?h.map((x,i)=>`<tr><td>${esc(x.name)}</td><td>${esc(x.phone||'—')}</td><td>${esc(x.type)}</td><td style="font-family:ui-monospace;font-size:10px">${esc(x.serial)}</td><td><span class="entry-status ${x.entered?'entered':'pending'}">${x.entered?'✓ נכנס':'טרם נכנס'}</span></td><td>${formatDate(x.created)}</td><td><div class="row-actions"><button class="tiny" onclick="loadTicket(${i})">טען</button><button class="tiny" onclick="duplicateTicket(${i})">שכפל</button><button class="tiny" onclick="deleteTicket('${esc(x.serial)}')">מחק</button></div></td></tr>`).join(''):'<tr><td colspan="7" class="empty">אין כרטיסים להצגה</td></tr>'}
+async function deleteTicket(serial){
+  if(!confirm('למחוק את הכרטיס '+serial+' מההיסטוריה?'))return;
+  const ok=await deleteTicketDB(serial);
+  historyCache=historyCache.filter(x=>x.serial!==serial);
+  safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
+  renderHistory();
+  updateCount();
+  toast(ok?'הכרטיס נמחק':'הכרטיס הוסר מהתצוגה');
+}
+async function clearHistory(){
+  if(!historyCache.length)return;
+  if(confirm('למחוק את כל היסטוריית ההנפקות?')){
+    await clearTicketsDB();
+    historyCache=[];
+    safeLocalRemove(HISTORY_KEY);
+    await idbRemove(HISTORY_KEY);
+    safeLocalSet(COUNTER_KEY,'0');
+    renderHistory();
+    updateCount();
+    status('ההיסטוריה נמחקה');
+  }
+}
+function getFilteredHistory(){
+  const q=($('historySearch').value||'').trim().toLowerCase();
+  if(!q)return historyCache.slice();
+  return historyCache.filter(x=>{
+    const name=String(x.name||'').toLowerCase();
+    const phone=String(x.phone||'').toLowerCase();
+    const serial=String(x.serial||'').toLowerCase();
+    const type=String(x.type||'').toLowerCase();
+    const statusText=x.entered?'נכנס':'טרם נכנס';
+    return name.includes(q)||phone.includes(q)||serial.includes(q)||type.includes(q)||statusText.includes(q);
+  });
+}
+function updateCount(){
+  $('countStat').textContent=historyCache.length+' כרטיסים';
+}
+function formatDate(iso){
+  if(!iso)return'—';
+  try{return new Intl.DateTimeFormat('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso))}
+  catch{return'—'}
+}
+function renderHistory(){
+  const h=getFilteredHistory();
+  updateCount();
+  $('historyBody').innerHTML=h.length?h.map((x,i)=>`
+    <tr>
+      <td>${esc(x.name)}</td>
+      <td>${esc(x.phone||'—')}</td>
+      <td>${esc(x.type)}</td>
+      <td style="font-family:ui-monospace;font-size:10px">${esc(x.serial)}</td>
+      <td><span class="entry-status ${x.entered?'entered':'pending'}">${x.entered?'✓ נכנס':'טרם נכנס'}</span></td>
+      <td>${formatDate(x.created)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="tiny" onclick="loadTicket(${i})">טען</button>
+          <button class="tiny" onclick="duplicateTicket(${i})">שכפל</button>
+          <button class="tiny" onclick="deleteTicket('${esc(x.serial)}')">מחק</button>
+        </div>
+      </td>
+    </tr>`).join(''):'<tr><td colspan="7" class="empty">אין כרטיסים להצגה</td></tr>';
+}
 $('historySearch').addEventListener('input',renderHistory);
 async function copySerial(){try{await navigator.clipboard.writeText($('serial').value);toast('המספר הסידורי הועתק')}catch{toast('לא ניתן להעתיק אוטומטית בדפדפן זה')}}
 function phoneIntl(p){p=(p||'').replace(/\D/g,'');if(p.startsWith('972'))return p;if(p.startsWith('0'))return'972'+p.slice(1);return p}
