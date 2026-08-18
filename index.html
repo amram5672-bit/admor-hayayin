@@ -1596,7 +1596,7 @@ async function hydrateStorage(){
     storageReady=true;
     $('storageStat').textContent='✓ מחובר ל-Supabase';
     renderHistory();
-    updateCount();
+    if(typeof updateCount==='function')updateCount();
     return historyCache;
   }catch(err){
     console.error('SUPABASE HISTORY LOAD ERROR:',err);
@@ -1616,7 +1616,7 @@ async function hydrateStorage(){
     storageReady=true;
     $('storageStat').textContent='⚠ מצב מקומי — Supabase לא זמין';
     renderHistory();
-    updateCount();
+    if(typeof updateCount==='function')updateCount();
     status('ההיסטוריה המקומית נטענה, אבל Supabase לא זמין: '+cloudErrorMessage(err),true);
     return historyCache;
   }
@@ -1918,7 +1918,7 @@ async function saveTicket(){
     safeLocalRemove(DRAFT_KEY);
     await idbRemove(DRAFT_KEY);
     renderHistory();
-    updateCount();
+    if(typeof updateCount==='function')updateCount();
     makeQR();
     $('storageStat').textContent='✓ Supabase + מכשיר';
     status('✓ הכרטיס נשמר ב־Supabase ובהיסטוריה · סה״כ '+historyCache.length+' כרטיסים');
@@ -1980,7 +1980,7 @@ async function deleteTicket(serial){
     await deleteTicketDB(serial).catch(()=>{});
     safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
     renderHistory();
-    updateCount();
+    if(typeof updateCount==='function')updateCount();
     status('✓ הכרטיס '+serial+' נמחק מ-Supabase ומההיסטוריה.');
     toast('הכרטיס נמחק לצמיתות');
   }catch(e){
@@ -2005,9 +2005,13 @@ function getFilteredHistory(){
       || statusText.includes(q);
   });
 }
+function updateCount(){
+  const el=$('historyCount')||$('totalCount')||$('count');
+  if(el)el.textContent=String(historyCache.length);
+}
 function renderHistory(){
   const h=getFilteredHistory();
-  updateCount();
+  if(typeof updateCount==='function')updateCount();
   $('historyBody').innerHTML=h.length?h.map((x,i)=>`
     <tr>
       <td>${esc(x.name)}</td>
