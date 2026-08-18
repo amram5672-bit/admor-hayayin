@@ -1535,75 +1535,101 @@ async function persistHistory(list){
 async function persistOneTicket(ticket){
   const normalized=normalizeHistory([ticket])[0];
   if(!normalized)return false;
-  const ok=await putTicketDB(normalized);
-  if(ok){
+
+  // Supabase is the source of truth. Never report success from local storage alone.
+  try{
+    let cloudRow=null;
+
+    if(normalized.cloudId!==undefined && normalized.cloudId!==null){
+      const client=initSupabase();
+      const {data,error}=await client.from('tickets')
+        .update({
+          full_name:normalized.name,
+          phone:normalizePhone(normalized.phone),
+          qr_token:buildCloudQR(normalized),
+          scanned:normalized.entered===true,
+          scanned_at:normalized.enteredAt||null
+        })
+        .eq('id',normalized.cloudId)
+        .select('id,created_at,full_name,phone,qr_token,scanned,scanned_at')
+        .single();
+      if(error)throw error;
+      cloudRow=data;
+    }else{
+      // A new ticket must be inserted into Supabase.
+      cloudRow=await cloudInsertTicket(normalized);
+    }
+
+    normalized.cloudId=cloudRow.id;
+    normalized.created=cloudRow.created_at||normalized.created;
+    normalized.entered=cloudRow.scanned===true;
+    normalized.enteredAt=cloudRow.scanned_at||null;
+
+    // Only after DB success, update the local cache.
+    const ok=await putTicketDB(normalized);
     historyCache=mergeHistories([normalized],historyCache);
     safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
-    $('storageStat').textContent='✓ נשמר במכשיר';
-    return true;
+    $('storageStat').textContent='✓ נשמר ב-Supabase';
+    return ok||true;
+  }catch(err){
+    console.error('SUPABASE PERSIST ERROR:',err);
+    $('storageStat').textContent='⚠ Supabase שגיאה';
+    status(cloudErrorMessage(err),true);
+    return false;
   }
-  // Fallback if IndexedDB is unavailable.
-  historyCache=mergeHistories([normalized],historyCache);
-  const localOK=safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
-  $('storageStat').textContent=localOK?'✓ נשמר במכשיר':'⚠ לא ניתן לשמור';
-  return localOK;
 }
+
 async function hydrateStorage(){
-  let lists=[];
-  // First load the unlimited per-ticket database.
+  // Always initialize and load the central database first.
   try{
-    const rows=await getAllTicketsFromDB();
-    if(rows.length) lists.push(rows);
-  }catch{}
-  // Then migrate old aggregate stores / legacy versions if present.
-  try{
-    const raw=safeLocalGet(HISTORY_KEY,'[]');
-    if(raw)lists.push(JSON.parse(raw));
-  }catch{}
-  for(const key of LEGACY_KEYS){
+    initSupabase();
+    const remote=await cloudFetchTickets();
+
+    historyCache=remote;
+
+    // Keep a local cache for faster UI/offline display, but never use it
+    // to replace a successful Supabase response.
+    for(const ticket of historyCache){
+      try{await putTicketDB(ticket)}catch{}
+    }
+    safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
+    storageReady=true;
+    $('storageStat').textContent='✓ מחובר ל-Supabase';
+    renderHistory();
+    updateCount();
+    return historyCache;
+  }catch(err){
+    console.error('SUPABASE HISTORY LOAD ERROR:',err);
+
+    // If the DB cannot be reached, retain local data but clearly show that
+    // it is local-only. This prevents a false impression that the DB loaded.
+    let lists=[];
     try{
-      const raw=safeLocalGet(key,'[]');
+      const rows=await getAllTicketsFromDB();
+      if(rows.length)lists.push(rows);
+    }catch{}
+    try{
+      const raw=safeLocalGet(HISTORY_KEY,'[]');
       if(raw)lists.push(JSON.parse(raw));
     }catch{}
+    historyCache=mergeHistories(...lists);
+    storageReady=true;
+    $('storageStat').textContent='⚠ מצב מקומי — Supabase לא זמין';
+    renderHistory();
+    updateCount();
+    status('ההיסטוריה המקומית נטענה, אבל Supabase לא זמין: '+cloudErrorMessage(err),true);
+    return historyCache;
   }
-  try{
-    const indexed=await idbGet(HISTORY_KEY);
-    if(indexed)lists.push(indexed);
-  }catch{}
-
-  historyCache=mergeHistories(...lists);
-
-  // Migrate every recovered ticket into its own IndexedDB record.
-  try{
-    for(const ticket of historyCache) await putTicketDB(ticket);
-  }catch{}
-
-  // Backup the complete list. No slice.
-  safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
-  storageReady=true;
-  renderHistory();
-  updateCount();
-  return historyCache;
 }
 
-function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
-function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
-async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4,5}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
 function nextSerial(){
-  const used=new Set(historyCache.map(x=>String(x.serial||'')));
-  let candidate='';
-  let attempts=0;
-  do{
-    candidate=String(Math.floor(10000+Math.random()*90000));
-    attempts++;
-  }while(used.has(candidate) && attempts<200);
-  if(used.has(candidate)){
-    for(let n=10000;n<=99999;n++){
-      const s=String(n);
-      if(!used.has(s)){candidate=s;break}
-    }
+  const used=new Set(historyCache.map(x=>String(x.serial)));
+  for(let attempt=0;attempt<5000;attempt++){
+    const n=Math.floor(10000+Math.random()*90000);
+    const s=String(n);
+    if(!used.has(s))return s;
   }
-  return candidate;
+  throw new Error('לא ניתן ליצור מספר כרטיס רנדומלי ייחודי');
 }
 
 function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
