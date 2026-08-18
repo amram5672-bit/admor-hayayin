@@ -1280,7 +1280,7 @@ html body .ticket.export-mobile .holo{z-index:3!important}
       <div class="section-label">זיהוי הכרטיס</div>
       <div class="field serial-box">
         <label for="serial">מספר כרטיס</label>
-        <input id="serial" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" readonly aria-readonly="true" aria-label="מספר כרטיס">
+        <input id="serial" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" readonly aria-readonly="true" aria-label="מספר כרטיס">
         <input id="ticketToken" type="hidden">
         <button class="copy-mini" onclick="copySerial()">העתק</button>
       </div>
@@ -1291,19 +1291,14 @@ html body .ticket.export-mobile .holo{z-index:3!important}
         <button class="btn btn-secondary" onclick="newTicket()">＋ חדש</button>
       </div>
       <button class="btn btn-scan" onclick="openScanner()">▣ סריקת כניסה</button>
-      <div class="export-row">
-        <button class="btn btn-ghost" onclick="sendWhatsApp()">WhatsApp</button>
-        <button class="btn btn-ghost" onclick="downloadPNG()">PNG</button>
+      <div class="export-row" style="grid-template-columns:1fr">
         <button class="btn btn-ghost" onclick="downloadPDF()">PDF</button>
-      </div>
-      <div class="actions" style="grid-template-columns:1fr;margin-top:8px">
-        <button class="btn btn-ghost" onclick="printTicket()">הדפסה</button>
       </div>
 
       <div id="status" class="status"><span class="status-dot"></span><span id="statusText"></span></div>
       <div class="security-note">
         <strong style="color:#b9aa9c">הערת אבטחה:</strong>
-        ה־QR מכיל מזהה וחתימה לזיהוי הכרטיס. סריקת הכניסה מסמנת את הכרטיס כ״נכנס״ בהיסטוריה המקומית. לאימות מאובטח בין כמה מכשירים נדרש חיבור לשרת מרכזי.
+        ה־QR מכיל מזהה ייחודי. בסריקה הראשונה המערכת מעדכנת ב־Supabase את הכרטיס כ״נכנס״ ושומרת את זמן הסריקה. סריקה חוזרת מזוהה ומציגה את זמן הכניסה הקודם.
       </div>
     </section>
 
@@ -1352,7 +1347,7 @@ html body .ticket.export-mobile .holo{z-index:3!important}
             <h2>היסטוריית הנפקות</h2>
           </div>
           <div>
-            <input id="historySearch" class="history-search" placeholder="חיפוש לפי שם רוכש..." aria-label="חיפוש בהיסטוריה">
+            <input id="historySearch" class="history-search" placeholder="חיפוש לפי שם או מספר טלפון..." aria-label="חיפוש לפי שם או מספר טלפון"><div id="historySearchHelp" style="margin-top:5px;color:#8e8278;font-size:9px">אפשר לחפש לפי שם מלא, מספר טלפון או מספר כרטיס</div>
             <div class="stats" style="margin-top:7px;justify-content:flex-start">
               <span class="stat" id="countStat">0 כרטיסים</span>
               <span class="stat" id="storageStat">שומר במכשיר</span>
@@ -1361,19 +1356,16 @@ html body .ticket.export-mobile .holo{z-index:3!important}
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>שם רוכש</th><th>טלפון</th><th>סוג</th><th>סידורי</th><th>סטטוס</th><th>נוצר</th><th>פעולות</th></tr></thead>
+            <thead><tr><th>שם רוכש</th><th>טלפון</th><th>סוג</th><th>סידורי</th><th>סטטוס</th><th>נסרק</th><th>זמן כניסה</th><th>פעולות</th></tr></thead>
             <tbody id="historyBody"></tbody>
           </table>
-        </div>
-        <div style="display:flex;justify-content:flex-start;margin-top:10px">
-          <button class="btn btn-danger" style="min-height:34px;font-size:10px" onclick="clearHistory()">נקה היסטוריה</button>
         </div>
       </section>
     </section>
   </main>
 </div>
 
-<div class="mobile-dock" aria-label="פעולות מהירות"><button class="btn btn-primary" onclick="saveTicket()">✓ הנפק</button><button class="btn btn-secondary" onclick="downloadPNG()">הורד</button><button class="btn btn-secondary" onclick="openScanner()">סריקה</button></div>
+<div class="mobile-dock" aria-label="פעולות מהירות"><button class="btn btn-primary" onclick="saveTicket()">✓ הנפק</button><button class="btn btn-secondary" onclick="openScanner()">סריקה</button></div>
 <div id="scannerModal" class="modal" aria-hidden="true">
   <div class="modal-card">
     <div class="modal-head">
@@ -1389,7 +1381,7 @@ html body .ticket.export-mobile .holo{z-index:3!important}
     <div id="reader" hidden></div>
     <div id="cameraHelp" class="camera-help">המצלמה תיפתח כאן. יש לאשר גישה למצלמה בפעם הראשונה.</div>
     <div class="manual-check">
-      <input id="manualSerial" placeholder="או הזן מספר כרטיס, למשל 0001">
+      <input id="manualSerial" placeholder="או הזן מספר כרטיס, למשל 58321">
       <button class="btn btn-primary" onclick="verifyManual()">אימות</button>
     </div>
     <div id="scanResult" class="scan-result"></div>
@@ -1450,14 +1442,14 @@ function normalizeHistory(list){
   return (Array.isArray(list)?list:[])
     .map(x=>({
       ...x,
-      serial:String(x.serial||'').padStart(4,'0'),
+      serial:String(x.serial||''),
       token:x.token||randomToken(),
       entered:!!x.entered,
       enteredAt:x.enteredAt||null,
       created:x.created||new Date().toISOString(),
       phone:x.phone||''
     }))
-    .filter(x=>/^\d{4}$/.test(x.serial));
+    .filter(x=>/^\d{4,5}$/.test(x.serial));
 }
 function mergeHistories(...lists){
   const map=new Map();
@@ -1593,23 +1585,44 @@ async function hydrateStorage(){
   return historyCache;
 }
 function nextSerial(){
-  const used=new Set(historyCache.map(x=>Number(x.serial)));
-  let n=Number(safeLocalGet(COUNTER_KEY,'0'))||0;
-  if(n<0)n=0;
+  const used=new Set(historyCache.map(x=>String(x.serial||'')));
+  let candidate='';
+  let attempts=0;
   do{
-    n++;
-    if(n>9999)n=1;
-  }while(used.has(n));
-  safeLocalSet(COUNTER_KEY,String(n));
-  return String(n).padStart(4,'0');
+    candidate=String(Math.floor(10000+Math.random()*90000));
+    attempts++;
+  }while(used.has(candidate) && attempts<200);
+  if(used.has(candidate)){
+    for(let n=10000;n<=99999;n++){
+      const s=String(n);
+      if(!used.has(s)){candidate=s;break}
+    }
+  }
+  return candidate;
 }
 function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
 function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
-async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
-function nextSerial(){const used=new Set(historyCache.map(x=>Number(x.serial)));let n=Number(safeLocalGet(COUNTER_KEY,'0'))||0;while(used.has(n+1))n++;n++;if(n>9999)n=1;while(used.has(n))n++;safeLocalSet(COUNTER_KEY,String(n));return String(n).padStart(4,'0')}
+async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4,5}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
+function nextSerial(){
+  const used=new Set(historyCache.map(x=>String(x.serial||'')));
+  let candidate='';
+  let attempts=0;
+  do{
+    candidate=String(Math.floor(10000+Math.random()*90000));
+    attempts++;
+  }while(used.has(candidate) && attempts<200);
+  if(used.has(candidate)){
+    for(let n=10000;n<=99999;n++){
+      const s=String(n);
+      if(!used.has(s)){candidate=s;break}
+    }
+  }
+  return candidate;
+}
+
 function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
 function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
-async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
+async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4,5}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
 function focusName(){$('name').focus();$('name').scrollIntoView({behavior:'smooth',block:'center'})}
 function newTicket(){
   draftPending=false;
@@ -1624,7 +1637,7 @@ function newTicket(){
   focusName();
   status('כרטיס חדש מוכן למילוי');
 }
-function update(){const d=payload();$('pname').textContent=d.name||'שם האורח';$('ptype').textContent=d.type||'כולל ספר';$('pserial').textContent=d.serial||'0000';$('previewSerial').textContent=d.serial||'0000';saveDraft();makeQR()}
+function update(){const d=payload();$('pname').textContent=d.name||'שם האורח';$('ptype').textContent=d.type||'כולל ספר';$('pserial').textContent=d.serial||'00000';$('previewSerial').textContent=d.serial||'00000';saveDraft();makeQR()}
 ['name','phone','type'].forEach(id=>{$(id).addEventListener('input',update);$(id).addEventListener('change',update)});
 function makeQR(){
   const box=$('qrcode');
@@ -1682,7 +1695,8 @@ function codeType(code){
   return code==='M'?'מארז':code==='E'?'כניסה':'ספר';
 }
 function buildCloudQR(item){
-  return 'WF26|'+String(item.serial).padStart(4,'0')+'|'+String(item.token||'')+'|'+typeCode(item.type);
+  // New ticket IDs are always random 5-digit numbers.
+  return 'WF26|'+String(item.serial).padStart(5,'0')+'|'+String(item.token||'')+'|'+typeCode(item.type);
 }
 function cloudHeaders(extra={}){
   return Object.assign({
@@ -1694,7 +1708,13 @@ function cloudHeaders(extra={}){
 }
 async function cloudInsertTicket(item){
   const qr=buildCloudQR(item);
-  const row={full_name:item.name,phone:item.phone||'',qr_token:qr};
+  const row={
+    full_name:item.name,
+    phone:item.phone||'',
+    qr_token:qr,
+    scanned:false,
+    scanned_at:null
+  };
   const res=await fetch(SUPABASE_TICKETS_URL,{
     method:'POST',
     headers:cloudHeaders({'Prefer':'return=minimal'}),
@@ -1711,7 +1731,7 @@ async function cloudInsertTicket(item){
   return true;
 }
 async function cloudFetchTickets(){
-  const res=await fetch(SUPABASE_TICKETS_URL+'?select=id,created_at,full_name,phone,qr_token&order=created_at.desc',{
+  const res=await fetch(SUPABASE_TICKETS_URL+'?select=id,created_at,full_name,phone,qr_token,scanned,scanned_at&order=created_at.desc',{
     method:'GET',headers:cloudHeaders(),cache:'no-store'
   });
   if(!res.ok){
@@ -1724,7 +1744,7 @@ async function cloudFetchTickets(){
   const rows=await res.json();
   return (Array.isArray(rows)?rows:[]).map(row=>{
     const parts=String(row.qr_token||'').split('|');
-    const serial=/^\d{4}$/.test(parts[1]||'')?parts[1]:'';
+    const serial=/^\d{4,5}$/.test(parts[1]||'')?String(parts[1]):'';
     const token=parts[2]||'';
     const type=codeType(parts[3]);
     if(!serial)return null;
@@ -1735,16 +1755,34 @@ async function cloudFetchTickets(){
       serial,
       token,
       created:row.created_at||new Date().toISOString(),
-      entered:false,
-      enteredAt:null,
+      entered:row.scanned===true,
+      enteredAt:row.scanned_at||null,
       cloudId:row.id
     };
   }).filter(Boolean);
 }
 async function cloudSaveEntry(item){
-  /* With the current schema there is no entered column. Keep entry state
-     locally for now; the central registration itself is stored in Supabase. */
-  return true;
+  if(!item?.cloudId) throw new Error('SUPABASE_NO_ROW_ID');
+  const scannedAt=item.enteredAt||new Date().toISOString();
+  const url=SUPABASE_TICKETS_URL+'?id=eq.'+encodeURIComponent(item.cloudId);
+  const res=await fetch(url,{
+    method:'PATCH',
+    headers:cloudHeaders({'Prefer':'return=representation'}),
+    body:JSON.stringify({
+      scanned:true,
+      scanned_at:scannedAt
+    }),
+    cache:'no-store'
+  });
+  if(!res.ok){
+    let detail='';
+    try{detail=await res.text()}catch{}
+    const err=new Error('SUPABASE_UPDATE_'+res.status);
+    err.status=res.status;err.detail=detail;
+    throw err;
+  }
+  const rows=await res.json().catch(()=>[]);
+  return Array.isArray(rows)?rows[0]:rows;
 }
 function cloudErrorMessage(err){
   if(err?.status===401||err?.status===403)
@@ -1776,16 +1814,48 @@ async function saveTicket(){
     return;
   }
   const d=payload();
+  d.phone=normalizePhone(d.phone);
+
   if(!d.name){
     status('יש להזין שם מלא לפני ההנפקה',true);
     focusName();
     return;
   }
+  if(!/^05\d{8}$/.test(d.phone)){
+    status('יש להזין מספר טלפון ישראלי תקין, למשל 0501234567',true);
+    $('phone').focus();
+    return;
+  }
+
+  const current=editingSerial ? historyCache.find(x=>x.serial===editingSerial) : null;
+  const isNew=(!editingSerial || draftPending || !current);
+
+  // For a new ticket, verify the phone against the central database.
+  if(isNew){
+    try{
+      const check=await fetch(SUPABASE_TICKETS_URL+'?select=id,phone&phone=eq.'+encodeURIComponent(d.phone)+'&limit=1',{
+        method:'GET',headers:cloudHeaders(),cache:'no-store'
+      });
+      if(!check.ok){
+        const detail=await check.text().catch(()=> '');
+        const err=new Error('SUPABASE_DUPLICATE_CHECK_'+check.status);
+        err.status=check.status;err.detail=detail;
+        throw err;
+      }
+      const rows=await check.json();
+      if(Array.isArray(rows)&&rows.length){
+        status('כבר קיים כרטיס עם מספר הטלפון הזה. לא ניתן להנפיק כרטיס נוסף.',true);
+        toast('המספר כבר רשום במערכת');
+        return;
+      }
+    }catch(err){
+      console.error('Supabase duplicate phone check failed:',err);
+      status('לא ניתן לבדוק את מספר הטלפון ב-Supabase. ההנפקה נעצרה כדי למנוע כפילות.',true);
+      return;
+    }
+  }
 
   let serial=d.serial;
-  const exists=historyCache.some(x=>x.serial===serial);
-  const isNew=(!editingSerial || draftPending || !exists || editingSerial!==serial);
-
   if(isNew){
     serial=nextSerial();
     d.serial=serial;
@@ -1797,22 +1867,25 @@ async function saveTicket(){
   const old=historyCache.find(x=>x.serial===serial);
   const item={
     ...d,
+    phone:d.phone,
     serial,
     token:d.token||randomToken(),
     created:old?.created||new Date().toISOString(),
     entered:old?.entered||false,
-    enteredAt:old?.enteredAt||null
+    enteredAt:old?.enteredAt||null,
+    cloudId:old?.cloudId||null
   };
 
-  /*
-    Cloud-first for new registrations:
-    1. Write the complete registration to Supabase.
-    2. Only after a successful cloud write, keep the local copy.
-    This prevents a "successful" ticket from silently existing only on the phone.
-  */
   if(isNew){
     try{
       await cloudInsertTicket(item);
+      // Reload the cloud row so we have its DB id.
+      const remote=await cloudFetchTickets();
+      const saved=remote.find(x=>x.serial===item.serial);
+      if(saved){
+        item.cloudId=saved.cloudId;
+        item.created=saved.created;
+      }
     }catch(err){
       console.error('Supabase INSERT failed:',err);
       status(cloudErrorMessage(err),true);
@@ -1872,46 +1945,48 @@ function duplicateTicket(i){
   focusName();
 }
 async function deleteTicket(serial){
-  if(!confirm('למחוק את הכרטיס '+serial+' מההיסטוריה?'))return;
-  const ok=await deleteTicketDB(serial);
-  historyCache=historyCache.filter(x=>x.serial!==serial);
-  safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
-  renderHistory();
-  updateCount();
-  toast(ok?'הכרטיס נמחק':'הכרטיס הוסר מהתצוגה');
-}
-async function clearHistory(){
-  if(!historyCache.length)return;
-  if(confirm('למחוק את כל היסטוריית ההנפקות?')){
-    await clearTicketsDB();
-    historyCache=[];
-    safeLocalRemove(HISTORY_KEY);
-    await idbRemove(HISTORY_KEY);
-    safeLocalSet(COUNTER_KEY,'0');
+  const x=historyCache.find(t=>t.serial===serial);
+  if(!x)return;
+
+  if(!confirm('למחוק לצמיתות את הכרטיס '+serial+' של '+(x.name||'')+'?\\n\\nהמחיקה תתבצע גם מ-Supabase ולא ניתן לבטל אותה.'))return;
+
+  if(!x.remoteId){
+    status('לכרטיס הזה אין מזהה Supabase. רענן את ההיסטוריה ונסה שוב.',true);
+    return;
+  }
+
+  try{
+    await deleteRemoteTicket(x.remoteId);
+
+    // Remove only this record from local cache after the DB deletion succeeds.
+    historyCache=historyCache.filter(t=>t.serial!==serial);
+    await deleteTicketDB(serial).catch(()=>{});
+    safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
     renderHistory();
     updateCount();
-    status('ההיסטוריה נמחקה');
+    status('✓ הכרטיס '+serial+' נמחק מ-Supabase ומההיסטוריה.');
+    toast('הכרטיס נמחק לצמיתות');
+  }catch(e){
+    console.error('Remote delete failed',e);
+    status('לא ניתן למחוק את הכרטיס מ-Supabase. הכרטיס נשאר בהיסטוריה.',true);
   }
 }
 function getFilteredHistory(){
-  const q=($('historySearch').value||'').trim().toLowerCase();
-  if(!q)return historyCache.slice();
+  const q=String($('historySearch')?.value||'').trim().toLowerCase();
+  if(!q)return historyCache;
+
+  const qPhone=normalizePhone(q);
   return historyCache.filter(x=>{
     const name=String(x.name||'').toLowerCase();
-    const phone=String(x.phone||'').toLowerCase();
+    const phone=normalizePhone(x.phone||'');
     const serial=String(x.serial||'').toLowerCase();
-    const type=String(x.type||'').toLowerCase();
     const statusText=x.entered?'נכנס':'טרם נכנס';
-    return name.includes(q)||phone.includes(q)||serial.includes(q)||type.includes(q)||statusText.includes(q);
+
+    return name.includes(q)
+      || phone.includes(qPhone)
+      || serial.includes(q)
+      || statusText.includes(q);
   });
-}
-function updateCount(){
-  $('countStat').textContent=historyCache.length+' כרטיסים';
-}
-function formatDate(iso){
-  if(!iso)return'—';
-  try{return new Intl.DateTimeFormat('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso))}
-  catch{return'—'}
 }
 function renderHistory(){
   const h=getFilteredHistory();
@@ -1923,33 +1998,34 @@ function renderHistory(){
       <td>${esc(x.type)}</td>
       <td style="font-family:ui-monospace;font-size:10px">${esc(x.serial)}</td>
       <td><span class="entry-status ${x.entered?'entered':'pending'}">${x.entered?'✓ נכנס':'טרם נכנס'}</span></td>
-      <td>${formatDate(x.created)}</td>
+      <td>${x.entered?'✓ כן':'—'}</td>
+      <td>${formatDate(x.enteredAt)}</td>
       <td>
         <div class="row-actions">
           <button class="tiny" onclick="loadTicket(${i})">טען</button>
           <button class="tiny" onclick="duplicateTicket(${i})">שכפל</button>
-          <button class="tiny" onclick="deleteTicket('${esc(x.serial)}')">מחק</button>
+          <button class="tiny" onclick="deleteTicket('${esc(x.serial)}')">מחק רשומה</button>
         </div>
       </td>
-    </tr>`).join(''):'<tr><td colspan="7" class="empty">אין כרטיסים להצגה</td></tr>';
+    </tr>`).join(''):'<tr><td colspan="8" class="empty">אין כרטיסים להצגה</td></tr>';
 }
 $('historySearch').addEventListener('input',renderHistory);
 async function copySerial(){try{await navigator.clipboard.writeText($('serial').value);toast('המספר הסידורי הועתק')}catch{toast('לא ניתן להעתיק אוטומטית בדפדפן זה')}}
 function phoneIntl(p){p=(p||'').replace(/\D/g,'');if(p.startsWith('972'))return p;if(p.startsWith('0'))return'972'+p.slice(1);return p}
-function sendWhatsApp(){const d=payload();if(!d.name||!d.phone){status('יש להזין שם ומספר טלפון',true);return}const text=`שלום ${d.name},\n\nזהו הכרטיס האישי שלך ל${EVENT.title}.\n\nסוג כרטיס: ${d.type}\n\n${EVENT.day}\n${EVENT.date} · ${EVENT.time}\n${EVENT.venue}, ${EVENT.address}\n\nיש להציג את הכרטיס בכניסה. הצמיד יינתן במקום.\n\nמספר כרטיס: ${d.serial}\n\nאדמו"ר היין 🍷`;window.open('https://wa.me/'+phoneIntl(d.phone)+'?text='+encodeURIComponent(text),'_blank','noopener')}
+
 
 function decodeQR(text){
   const t=String(text||'').trim();
   if(t.startsWith('WF26|')){
     const a=t.split('|');
-    if(a.length===4 && /^\d{4}$/.test(a[1]) && /^[A-Za-z0-9]+$/.test(a[2]) && /^[SME]$/.test(a[3]))
+    if(a.length===4 && /^\d{4,5}$/.test(a[1]) && /^[A-Za-z0-9]+$/.test(a[2]) && /^[SME]$/.test(a[3]))
       return{v:4,event:'WINE-FEST-2026',serial:a[1],token:a[2],type:codeType(a[3])};
-    if(a.length===3 && /^\d{4}$/.test(a[1]) && /^[A-Za-z0-9]+$/.test(a[2]))
+    if(a.length===3 && /^\d{4,5}$/.test(a[1]) && /^[A-Za-z0-9]+$/.test(a[2]))
       return{v:3,event:'WINE-FEST-2026',serial:a[1],token:a[2]};
   }
   if(t.startsWith('WINEFEST2|')){
     const a=t.split('|');
-    if(a.length===3 && /^\d{4}$/.test(a[1]) && a[2])
+    if(a.length===3 && /^\d{4,5}$/.test(a[1]) && a[2])
       return{v:2,event:'WINE-FEST-2026',serial:a[1],token:a[2]};
   }
   if(t.startsWith('WINEFEST|')){
@@ -1961,26 +2037,59 @@ function decodeQR(text){
   }
   // Accept a bare 4-digit value too, so a generic QR containing 0001 can
   // still be checked manually.
-  if(/^\d{4}$/.test(t)) return {v:1,serial:t};
+  if(/^\d{4,5}$/.test(t)) return {v:1,serial:t};
   return null;
 }
 async function verifyTicketData(data){
   if(!data?.serial)return{ok:false,msg:'QR לא תקין או לא שייך למערכת.'};
-  const serial=String(data.serial).padStart(4,'0');
-  const x=historyCache.find(t=>t.serial===serial);
-  if(!x)return{ok:false,msg:'הכרטיס לא נמצא בהיסטוריה המקומית.'};
+  const serial=String(data.serial);
+  if(!/^\d{4,5}$/.test(serial))return{ok:false,msg:'מספר הכרטיס אינו תקין.'};
+
+  // Always refresh from Supabase before accepting entry.
+  let x=historyCache.find(t=>String(t.serial)===serial);
+  try{
+    const remote=await cloudFetchTickets();
+    const remoteTicket=remote.find(t=>String(t.serial)===serial);
+    if(remoteTicket){
+      x=remoteTicket;
+      const idx=historyCache.findIndex(t=>String(t.serial)===serial);
+      if(idx>=0) historyCache[idx]=remoteTicket;
+      else historyCache.push(remoteTicket);
+    }
+  }catch(err){
+    console.error('Supabase scan lookup failed:',err);
+    return{ok:false,msg:'לא ניתן לאמת את הכרטיס מול Supabase. בדוק חיבור לאינטרנט.'};
+  }
+
+  if(!x)return{ok:false,msg:'הכרטיס לא נמצא ב-Supabase.'};
   if(data.token && x.token && data.token!==x.token)
     return{ok:false,msg:'ה־QR אינו תואם לכרטיס שהונפק.'};
+
   if(x.entered)
     return{ok:true,already:true,msg:`הכרטיס של ${x.name} כבר סומן כנכנס ב־${formatDate(x.enteredAt)}.`};
-  x.entered=true;
-  x.enteredAt=new Date().toISOString();
-  const saved=await persistOneTicket(x);
-  if(!saved)return{ok:false,msg:'הכרטיס זוהה, אך לא ניתן היה לשמור את סימון הכניסה.'};
-  renderHistory();
-  return{ok:true,msg:`✓ הכניסה אושרה — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
-}
 
+  const scanTime=new Date().toISOString();
+
+  // First scan: update BOTH DB columns centrally.
+  try{
+    await cloudSaveEntry({...x,entered:true,enteredAt:scanTime});
+  }catch(err){
+    console.error('Supabase entry update failed:',err);
+    if(err?.status===401||err?.status===403)
+      return{ok:false,msg:'הכרטיס זוהה, אך Supabase חסם UPDATE. צריך להוסיף RLS Policy של UPDATE לטבלת tickets.'};
+    return{ok:false,msg:'הכרטיס זוהה, אך לא ניתן לרשום את הכניסה ב-Supabase.'};
+  }
+
+  x.entered=true;
+  x.enteredAt=scanTime;
+  const saved=await persistOneTicket(x);
+  renderHistory();
+
+  if(!saved){
+    return{ok:true,msg:`✓ הכניסה נרשמה ב-Supabase — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
+  }
+  return{ok:true,msg:`✓ הכניסה אושרה ונרשמה — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
+}
 let cameraStream=null;
 let nativeScanTimer=null;
 let scannerBusy=false;
@@ -2165,11 +2274,11 @@ function closeScanner(){
 }
 async function verifyManual(){
   const serial=$('manualSerial').value.trim();
-  if(!/^\d{1,4}$/.test(serial)){
-    setScanResult('הזן מספר כרטיס תקין, למשל 0001.','error');
+  if(!/^\d{4,5}$/.test(serial)){
+    setScanResult('הזן מספר כרטיס תקין, למשל 58321.','error');
     return;
   }
-  const normalized=serial.padStart(4,'0');
+  const normalized=serial;
   const x=historyCache.find(t=>t.serial===normalized);
   if(!x){
     setScanResult('הכרטיס לא נמצא במערכת.','error');
@@ -2180,9 +2289,7 @@ async function verifyManual(){
 }
 async function waitForQR(){const box=$('qrcode');for(let i=0;i<80;i++){const c=box?.querySelector('canvas');if(c&&c.width>0&&c.height>0)return true;await new Promise(r=>setTimeout(r,50))}return false}
 async function renderCanvas(){await waitForQR();const ticket=$('ticket');const oldClass=ticket.className,oldW=ticket.style.width,oldH=ticket.style.height;ticket.classList.add('export-mobile');ticket.style.width='1080px';ticket.style.height='1920px';await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(document.fonts?.ready)await document.fonts.ready;const imgs=[...ticket.querySelectorAll('img')];await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=img.onerror=res})));const canvas=await html2canvas(ticket,{scale:1,width:1080,height:1920,useCORS:true,backgroundColor:null,logging:false,imageTimeout:15000,foreignObjectRendering:false});ticket.className=oldClass;ticket.style.width=oldW;ticket.style.height=oldH;return canvas}
-async function downloadPNG(){try{const c=await renderCanvas();const a=document.createElement('a');a.download=($('serial').value||'ticket')+'.png';a.href=c.toDataURL('image/png');a.click();toast('הכרטיס הורד עם QR גדול וברור')}catch(e){console.error(e);status('לא ניתן ליצור את הכרטיס',true)}}
 async function downloadPDF(){try{const c=await renderCanvas(),img=c.toDataURL('image/png'),{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:[90,160],compress:true});pdf.addImage(img,'PNG',0,0,90,160,undefined,'FAST');pdf.save(($('serial').value||'ticket')+'.pdf');toast('PDF נוצר')}catch(e){console.error(e);status('לא ניתן ליצור PDF',true)}}
-async function printTicket(){try{const c=await renderCanvas(),img=c.toDataURL('image/png'),w=window.open('','_blank');if(!w){status('הדפדפן חסם חלון הדפסה',true);return}w.document.write(`<html dir="rtl"><head><title>${esc($('serial').value)}</title><style>@page{size:90mm 160mm;margin:0}html,body{margin:0;width:90mm;height:160mm}img{width:90mm;height:160mm;display:block}</style></head><body><img src="${img}" onload="setTimeout(function(){window.print()},300)"></body></html>`);w.document.close()}catch(e){console.error(e);status('לא ניתן להדפיס',true)}}
 function openSite(){window.open('https://admorhayayin.co.il/','_blank','noopener')}
 async function cleanupOldServiceWorker(){try{const regs=await navigator.serviceWorker?.getRegistrations?.();if(regs?.length){for(const r of regs)await r.unregister();const keys=await caches?.keys?.();if(keys)for(const k of keys)await caches.delete(k);if(!safeLocalGet('sw_cleanup_v10')){safeLocalSet('sw_cleanup_v10','1');location.reload();return true}}}catch(e){console.warn('SW cleanup',e)}return false}
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveTicket()}if(e.key.toLowerCase()==='n'&&document.activeElement?.tagName!=='INPUT'&&document.activeElement?.tagName!=='TEXTAREA')newTicket();if(e.key==='Escape'&&$('scannerModal').classList.contains('open'))closeScanner()});
