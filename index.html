@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;600;700&family=Heebo:wght@400;500;600;700;800&display=swap');
 
@@ -1605,7 +1606,6 @@ function nextSerial(){
   return candidate;
 }
 
-function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
 function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
 async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4,5}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
 function focusName(){$('name').focus();$('name').scrollIntoView({behavior:'smooth',block:'center'})}
@@ -1669,233 +1669,124 @@ function makeQR(){
 /* ===== SUPABASE CLOUD STORAGE =====
    Publishable key is safe for browser use. Never put a service_role/secret key here.
 */
+
 const SUPABASE_URL='https://iklattjtillfgicbalvw.supabase.co';
 const SUPABASE_KEY='sb_publishable_YToeFaf4-iV3TYZPCXkE4g_RKsUb0Ux';
 const SUPABASE_TICKETS_URL=SUPABASE_URL+'/rest/v1/tickets';
-function supabaseIsConfigured(){
-  return Boolean(SUPABASE_URL && SUPABASE_KEY && SUPABASE_TICKETS_URL);
-}
-async function supabaseHealthCheck(){
-  if(!supabaseIsConfigured()) throw new Error('SUPABASE_CONFIG_MISSING');
-  const res=await fetch(
-    SUPABASE_TICKETS_URL+'?select=id&limit=1',
-    {method:'GET',headers:cloudHeaders(),cache:'no-store'}
-  );
-  const body=await res.text();
-  if(!res.ok){
-    const err=new Error('SUPABASE_HEALTH_'+res.status);
-    err.status=res.status;err.detail=body;
-    throw err;
-  }
-  return true;
-}
+let supabaseClient=null;
 
-
-function typeCode(type){
-  return type==='מארז'?'M':type==='כניסה'?'E':'S';
-}
-function codeType(code){
-  return code==='M'?'מארז':code==='E'?'כניסה':'ספר';
-}
-function buildCloudQR(item){
-  // New ticket IDs are always random 5-digit numbers.
-  return 'WF26|'+String(item.serial).padStart(5,'0')+'|'+String(item.token||'')+'|'+typeCode(item.type);
-}
-function cloudHeaders(extra={}){
-  // Supabase sb_publishable_* keys are API keys, not JWT access tokens.
-  // Send the key via `apikey` only; do NOT put it in Authorization: Bearer.
-  return Object.assign({
-    'apikey':SUPABASE_KEY,
-    'Content-Type':'application/json',
-    'Accept':'application/json'
-  },extra);
-}
-async function cloudInsertTicket(item){
-  const qr=buildCloudQR(item);
-  const row={
-    full_name:item.name,
-    phone:item.phone||'',
-    qr_token:qr,
-    scanned:false,
-    scanned_at:null
-  };
-  const res=await fetch(SUPABASE_TICKETS_URL,{
-    method:'POST',
-    headers:cloudHeaders({'Prefer':'return=representation'}),
-    body:JSON.stringify(row),
-    cache:'no-store'
+function initSupabase(){
+  if(supabaseClient)return supabaseClient;
+  if(!window.supabase?.createClient)throw new Error('SUPABASE_SDK_NOT_LOADED');
+  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+    auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
   });
-  if(!res.ok){
-    let detail='';
-    try{detail=await res.text()}catch{}
-    const err=new Error('SUPABASE_INSERT_'+res.status);
-    err.status=res.status;err.detail=detail;
-    throw err;
-  }
-  const rows=await res.json().catch(()=>[]);
-  const created=Array.isArray(rows)?rows[0]:rows;
-  if(!created?.id){
-    const err=new Error('SUPABASE_INSERT_NO_ROW_RETURNED');
-    err.status=200;err.detail='INSERT succeeded but Supabase did not return the created row.';
-    throw err;
-  }
-  return created;
+  return supabaseClient;
 }
+function supabaseIsConfigured(){return Boolean(SUPABASE_URL&&SUPABASE_KEY&&window.supabase?.createClient)}
+function typeCode(type){return type==='מארז'?'M':type==='כניסה'?'E':'S'}
+function codeType(code){return code==='M'?'מארז':code==='E'?'כניסה':'ספר'}
+function buildCloudQR(item){return 'WF26|'+String(item.serial).padStart(5,'0')+'|'+String(item.token||'')+'|'+typeCode(item.type)}
 function parseCloudQR(qr){
   const t=String(qr||'').trim();
-
-  // Current format: WF26|12345|TOKEN|S/M/E
   if(t.startsWith('WF26|')){
     const a=t.split('|');
-    if(a.length>=4 && /^\d{4,5}$/.test(a[1])){
-      return {
-        serial:String(a[1]),
-        token:String(a[2]||''),
-        type:codeType(a[3])
-      };
-    }
-    if(a.length===3 && /^\d{4,5}$/.test(a[1])){
-      return {serial:String(a[1]),token:String(a[2]||''),type:'ספר'};
-    }
+    if(a.length>=4&&/^\d{4,5}$/.test(a[1]))return{serial:String(a[1]),token:String(a[2]||''),type:codeType(a[3])};
+    if(a.length===3&&/^\d{4,5}$/.test(a[1]))return{serial:String(a[1]),token:String(a[2]||''),type:'ספר'};
   }
-
-  // Previous formats used by earlier versions.
   if(t.startsWith('WINEFEST2|')){
     const a=t.split('|');
-    if(a.length>=3 && /^\d{4,5}$/.test(a[1]))
-      return {serial:String(a[1]),token:String(a[2]||''),type:'ספר'};
+    if(a.length>=3&&/^\d{4,5}$/.test(a[1]))return{serial:String(a[1]),token:String(a[2]||''),type:'ספר'};
   }
-
-  // Older format: WINEFEST|base64(JSON)
   if(t.startsWith('WINEFEST|')){
     try{
       const raw=atob(t.slice(9));
       const json=decodeURIComponent(Array.from(raw).map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
       const obj=JSON.parse(json);
-      if(obj?.serial && /^\d{4,5}$/.test(String(obj.serial))){
-        return {
-          serial:String(obj.serial),
-          token:String(obj.token||''),
-          type:obj.type||'ספר'
-        };
-      }
+      if(obj?.serial&&/^\d{4,5}$/.test(String(obj.serial)))return{serial:String(obj.serial),token:String(obj.token||''),type:obj.type||'ספר'};
     }catch{}
   }
-
-  // Very old/local format: serial|token
   const simple=t.match(/^(\d{4,5})\|([A-Za-z0-9]+)$/);
-  if(simple){
-    return {serial:simple[1],token:simple[2],type:'ספר'};
-  }
-
-  // Last-resort legacy value containing only the serial.
-  if(/^\d{4,5}$/.test(t)){
-    return {serial:t,token:'',type:'ספר'};
-  }
-
+  if(simple)return{serial:simple[1],token:simple[2],type:'ספר'};
+  if(/^\d{4,5}$/.test(t))return{serial:t,token:'',type:'ספר'};
   return null;
 }
-
+function cloudErrorMessage(err){
+  const msg=String(err?.message||err?.details||err?.hint||'');
+  if(err?.code==='42501'||/row-level security|permission denied/i.test(msg))return 'Supabase דחה את הפעולה בגלל RLS. בדוק שיש Policy מתאימה ל־SELECT/INSERT/UPDATE/DELETE.';
+  if(/duplicate|unique/i.test(msg))return 'Supabase דחה את הרשומה כי ערך ייחודי כבר קיים.';
+  if(/failed to fetch|network/i.test(msg))return 'אין חיבור ל־Supabase. בדוק אינטרנט ונסה שוב.';
+  return 'Supabase: '+(msg||'הפעולה נכשלה');
+}
+async function supabaseHealthCheck(){
+  const {error}=await initSupabase().from('tickets').select('id').limit(1);
+  if(error)throw error;
+  return true;
+}
 async function cloudFetchTickets(){
-  const res=await fetch(
-    SUPABASE_TICKETS_URL+
-    '?select=id,created_at,full_name,phone,qr_token,scanned,scanned_at&order=created_at.desc',
-    {method:'GET',headers:cloudHeaders(),cache:'no-store'}
-  );
-
-  if(!res.ok){
-    let detail='';
-    try{detail=await res.text()}catch{}
-    const err=new Error('SUPABASE_SELECT_'+res.status);
-    err.status=res.status;err.detail=detail;
-    throw err;
-  }
-
-  const rows=await res.json();
-
-  return (Array.isArray(rows)?rows:[]).map(row=>{
+  const {data,error}=await initSupabase().from('tickets')
+    .select('id,created_at,full_name,phone,qr_token,scanned,scanned_at')
+    .order('created_at',{ascending:false});
+  if(error)throw error;
+  return (Array.isArray(data)?data:[]).map(row=>{
     const parsed=parseCloudQR(row.qr_token);
     if(!parsed)return null;
-
-    return {
-      name:String(row.full_name||''),
-      phone:normalizePhone(row.phone||''),
-      type:parsed.type||'ספר',
-      serial:String(parsed.serial),
-      token:String(parsed.token||''),
-      created:row.created_at||new Date().toISOString(),
-      entered:row.scanned===true,
-      enteredAt:row.scanned_at||null,
-      cloudId:row.id
+    return{
+      name:String(row.full_name||''),phone:normalizePhone(row.phone||''),
+      type:parsed.type||'ספר',serial:String(parsed.serial),token:String(parsed.token||''),
+      created:row.created_at||new Date().toISOString(),entered:row.scanned===true,
+      enteredAt:row.scanned_at||null,cloudId:row.id
     };
   }).filter(Boolean);
 }
-
+async function cloudFindPhone(phone){
+  const {data,error}=await initSupabase().from('tickets')
+    .select('id,phone').eq('phone',normalizePhone(phone)).limit(1);
+  if(error)throw error;
+  return Array.isArray(data)&&data.length?data[0]:null;
+}
+async function cloudInsertTicket(item){
+  const serial=String(item.serial);
+  const row={
+    id:Number(serial),
+    full_name:item.name,
+    phone:normalizePhone(item.phone),
+    qr_token:buildCloudQR(item),
+    scanned:false,
+    scanned_at:null
+  };
+  const {data,error}=await initSupabase().from('tickets')
+    .insert(row)
+    .select('id,created_at,full_name,phone,qr_token,scanned,scanned_at')
+    .single();
+  if(error)throw error;
+  if(!data?.id)throw new Error('Supabase did not return the inserted ticket.');
+  return data;
+}
 async function cloudSaveEntry(item){
-  if(!item?.cloudId) throw new Error('SUPABASE_NO_ROW_ID');
+  if(item?.cloudId===undefined||item?.cloudId===null)throw new Error('SUPABASE_NO_ROW_ID');
   const scannedAt=item.enteredAt||new Date().toISOString();
-  const url=SUPABASE_TICKETS_URL+'?id=eq.'+encodeURIComponent(item.cloudId);
-  const res=await fetch(url,{
-    method:'PATCH',
-    headers:cloudHeaders({'Prefer':'return=representation'}),
-    body:JSON.stringify({
-      scanned:true,
-      scanned_at:scannedAt
-    }),
-    cache:'no-store'
-  });
-  if(!res.ok){
-    let detail='';
-    try{detail=await res.text()}catch{}
-    const err=new Error('SUPABASE_UPDATE_'+res.status);
-    err.status=res.status;err.detail=detail;
-    throw err;
-  }
-  const rows=await res.json().catch(()=>[]);
-  return Array.isArray(rows)?rows[0]:rows;
+  const {data,error}=await initSupabase().from('tickets')
+    .update({scanned:true,scanned_at:scannedAt})
+    .eq('id',item.cloudId)
+    .select('id,scanned,scanned_at').single();
+  if(error)throw error;
+  return data;
 }
-function cloudErrorMessage(err){
-  console.error('Supabase error:',err?.status,err?.detail||err);
-  if(err?.status===401||err?.status===403)
-    return 'Supabase דחה את הבקשה. בדוק את ה־RLS Policy ואת ה־Publishable Key.';
-  if(err?.status===400)
-    return 'Supabase החזיר 400. בדוק שהעמודות scanned ו־scanned_at קיימות וששמות העמודות נכונים.';
-  if(err?.status===404)
-    return 'Supabase לא מצא את טבלת tickets או את כתובת ה־API.';
-  if(err?.status>=500)
-    return 'Supabase לא זמין כרגע.';
-  return 'שגיאת Supabase. פתח את Console בדפדפן לפרטים.';
-}
-
-async function syncCloudHistory(){
-  try{
-    const remote=await cloudFetchTickets();
-
-    const remoteBySerial=new Map(remote.map(x=>[String(x.serial),x]));
-    const localOnly=historyCache.filter(x=>!remoteBySerial.has(String(x.serial)));
-
-    // Supabase is authoritative for records that exist there.
-    // This prevents local stale copies from overwriting cloud scanned state,
-    // QR token, phone or cloudId.
-    historyCache=mergeHistories(remote,localOnly);
-
-    for(const ticket of historyCache) await putTicketDB(ticket);
-    safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
-
-    renderHistory();
-    updateCount();
-    $('storageStat').textContent='✓ Supabase + מכשיר';
-    return true;
-  }catch(err){
-    console.error('Supabase history sync failed:',err);
-    $('storageStat').textContent='⚠ Supabase לא מסונכרן';
-    status('לא ניתן לטעון את ההיסטוריה מ-Supabase. בדוק חיבור והרשאות RLS.',true);
-    return false;
-  }
+async function deleteRemoteTicket(remoteId){
+  if(remoteId===undefined||remoteId===null)throw new Error('SUPABASE_NO_ROW_ID');
+  const {error}=await initSupabase().from('tickets').delete().eq('id',remoteId);
+  if(error)throw error;
+  return true;
 }
 
 async function saveTicket(){
   status('שולח את הכרטיס ל־Supabase…');
+  try{initSupabase()}catch(e){
+    console.error(e);
+    status('חיבור Supabase לא נטען. רענן את הדף ונסה שוב.',true);
+    return;
+  }
   if(!storageReady){
     status('המערכת עדיין טוענת את ההיסטוריה. נסה שוב בעוד רגע.',true);
     return;
@@ -1920,24 +1811,15 @@ async function saveTicket(){
   // For a new ticket, verify the phone against the central database.
   if(isNew){
     try{
-      const check=await fetch(SUPABASE_TICKETS_URL+'?select=id,phone&phone=eq.'+encodeURIComponent(d.phone)+'&limit=1',{
-        method:'GET',headers:cloudHeaders(),cache:'no-store'
-      });
-      if(!check.ok){
-        const detail=await check.text().catch(()=> '');
-        const err=new Error('SUPABASE_DUPLICATE_CHECK_'+check.status);
-        err.status=check.status;err.detail=detail;
-        throw err;
-      }
-      const rows=await check.json();
-      if(Array.isArray(rows)&&rows.length){
+      const duplicate=await cloudFindPhone(d.phone);
+      if(duplicate){
         status('כבר קיים כרטיס עם מספר הטלפון הזה. לא ניתן להנפיק כרטיס נוסף.',true);
         toast('המספר כבר רשום במערכת');
         return;
       }
     }catch(err){
       console.error('Supabase duplicate phone check failed:',err);
-      status('לא ניתן לבדוק את מספר הטלפון ב-Supabase. ההנפקה נעצרה כדי למנוע כפילות.',true);
+      status(cloudErrorMessage(err),true);
       return;
     }
   }
@@ -2415,8 +2297,9 @@ window.addEventListener('beforeunload',()=>{
 
     await hydrateStorage();
 
-    // Verify Supabase first. If this fails, do not pretend the history is cloud-backed.
+    // Initialize the official Supabase client before any DB operation.
     try{
+      initSupabase();
       await supabaseHealthCheck();
       $('storageStat').textContent='✓ Supabase מחובר';
     }catch(e){
