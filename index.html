@@ -1652,25 +1652,7 @@ async function printTicket(){
     w.document.write(`<html dir="rtl"><head><title>${esc($('serial').value)}</title>
       <style>@page{size:90mm 160mm;margin:0}html,body{margin:0;width:90mm;height:160mm;background:#fff}
       body{display:flex;align-items:center;justify-content:center}img{width:90mm;height:160mm;display:block}</style>
-      </head><body><img src="${img}" onload="setTimeout(()=>window.print(),300)">
-<style>
-#offlinePill{position:fixed;top:8px;left:8px;z-index:2000;padding:6px 9px;border-radius:999px;
-font:600 10px/1 sans-serif;color:#d9cfbf;background:rgba(18,12,14,.92);
-border:1px solid rgba(236,213,138,.16);backdrop-filter:blur(8px)}
-#offlinePill.ok{color:#bfe8c7;border-color:rgba(95,170,115,.22)}
-</style>
-<div id="offlinePill">Offline</div>
-<script>
-(function(){
-  const p=document.getElementById('offlinePill');
-  function update(){p.textContent=navigator.onLine?'מוכן · Offline זמין':'מצב Offline';p.className=navigator.onLine?'ok':''}
-  addEventListener('online',update); addEventListener('offline',update); update();
-  if('serviceWorker' in navigator){
-    addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-  }
-})();
-</script>
-</body></html>`);
+      </head><body><img src="${img}" onload="setTimeout(function(){window.print()},300)"></body></html>`);
     w.document.close();
   }catch(e){
     console.error(e);
