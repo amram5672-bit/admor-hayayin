@@ -1702,9 +1702,10 @@ function buildCloudQR(item){
   return 'WF26|'+String(item.serial).padStart(5,'0')+'|'+String(item.token||'')+'|'+typeCode(item.type);
 }
 function cloudHeaders(extra={}){
+  // Supabase sb_publishable_* keys are API keys, not JWT access tokens.
+  // Send the key via `apikey` only; do NOT put it in Authorization: Bearer.
   return Object.assign({
     'apikey':SUPABASE_KEY,
-    'Authorization':'Bearer '+SUPABASE_KEY,
     'Content-Type':'application/json',
     'Accept':'application/json'
   },extra);
@@ -1732,7 +1733,13 @@ async function cloudInsertTicket(item){
     throw err;
   }
   const rows=await res.json().catch(()=>[]);
-  return Array.isArray(rows)?rows[0]:rows;
+  const created=Array.isArray(rows)?rows[0]:rows;
+  if(!created?.id){
+    const err=new Error('SUPABASE_INSERT_NO_ROW_RETURNED');
+    err.status=200;err.detail='INSERT succeeded but Supabase did not return the created row.';
+    throw err;
+  }
+  return created;
 }
 function parseCloudQR(qr){
   const t=String(qr||'').trim();
@@ -2407,6 +2414,17 @@ window.addEventListener('beforeunload',()=>{
     try{await cleanupOldServiceWorker()}catch(e){console.warn('SW cleanup',e)}
 
     await hydrateStorage();
+
+    // Verify Supabase first. If this fails, do not pretend the history is cloud-backed.
+    try{
+      await supabaseHealthCheck();
+      $('storageStat').textContent='✓ Supabase מחובר';
+    }catch(e){
+      console.error('Supabase connection failed:',e);
+      $('storageStat').textContent='⚠ Supabase לא מחובר';
+      status(cloudErrorMessage(e),true);
+    }
+
     await syncCloudHistory();
 
     draftPending=true;
@@ -2416,16 +2434,6 @@ window.addEventListener('beforeunload',()=>{
     $('serial').value=nextSerial();
     $('ticketToken').value=randomToken();
     update();
-
-    // Final connectivity check. This does not block the UI.
-    try{
-      await supabaseHealthCheck();
-      $('storageStat').textContent='✓ מחובר ל־Supabase';
-    }catch(e){
-      console.error('Supabase health check failed',e);
-      $('storageStat').textContent='⚠ Supabase לא מחובר';
-      status('Supabase לא זמין: '+(e?.detail||e?.message||'בדוק חיבור ו־RLS'),true);
-    }
 
     if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
   }catch(e){
