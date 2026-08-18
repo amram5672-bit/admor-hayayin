@@ -1,0 +1,14 @@
+{
+  "name": "אדמו״ר היין",
+  "short_name": "אדמו״ר היין",
+  "description": "מערכת Offline לניהול והנפקת כרטיסי פסטיבל היין",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0809",
+  "theme_color": "#0b0809",
+  "icons": []
+}

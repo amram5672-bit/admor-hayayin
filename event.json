@@ -1,0 +1,40 @@
+{
+  "format": "admor-hayayin-event",
+  "version": 1,
+  "event": {
+    "id": "WINE-FEST-2026",
+    "name": "פסטיבל היין והשקת ספר היין",
+    "subtitle": "מהאדמה לנשמה",
+    "date": "29/09/2026",
+    "time": "17:00",
+    "day": "יום שלישי · חול המועד סוכות",
+    "venue": "מלון ירמיהו",
+    "address": "רחוב ירמיהו 33, ירושלים"
+  },
+  "ticketTypes": [
+    {
+      "id": "ספר",
+      "name": "כולל ספר"
+    },
+    {
+      "id": "מארז",
+      "name": "כולל המארז"
+    },
+    {
+      "id": "כניסה",
+      "name": "כניסה בלבד"
+    }
+  ],
+  "settings": {
+    "serialFormat": "0000",
+    "nextSerial": 1,
+    "braceletAtEntrance": true,
+    "seating": false,
+    "qrEnabled": true,
+    "entryCheckEnabled": true,
+    "offlineMode": true
+  },
+  "tickets": [],
+  "createdAt": "2026-08-17T20:46:15.012802+00:00",
+  "updatedAt": "2026-08-17T20:46:15.012827+00:00"
+}
