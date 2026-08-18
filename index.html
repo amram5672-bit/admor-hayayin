@@ -199,10 +199,12 @@ tbody tr:hover{background:rgba(255,255,255,.025)}
 .empty{text-align:center!important;color:#716860!important;padding:24px!important}
 .toast{
   position:fixed;bottom:20px;left:50%;transform:translate(-50%,18px);opacity:0;pointer-events:none;
-  padding:10px 14px;border-radius:10px;background:#171012;border:1px solid rgba(236,213,138,.22);
-  color:#eee6dc;font-size:12px;box-shadow:0 15px 40px rgba(0,0,0,.4);transition:.2s;z-index:100
+  padding:12px 18px;border-radius:12px;background:#171012;border:1px solid rgba(236,213,138,.22);
+  color:#eee6dc;font-size:14px;font-weight:600;box-shadow:0 15px 40px rgba(0,0,0,.4);transition:.2s;z-index:100
 }
 .toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.success{background:#1a6b3a;border-color:#2ecc71;color:#fff}
+.toast.error{background:#8b1e1e;border-color:#ff6b6b;color:#fff}
 .shortcut{
   color:#6e655e;font-size:9px;margin-right:4px
 }
@@ -246,7 +248,7 @@ tbody tr:hover{background:rgba(255,255,255,.025)}
 .camera-stage .scan-line{position:absolute;left:17%;right:17%;top:50%;height:2px;background:#f0d47a;box-shadow:0 0 14px rgba(240,212,122,.9);animation:scanline 1.8s ease-in-out infinite;pointer-events:none}
 @keyframes scanline{0%,100%{transform:translateY(-110px);opacity:.45}50%{transform:translateY(110px);opacity:1}}
 .camera-help{font-size:10px;color:#8e8278;text-align:center;margin-top:7px;line-height:1.5}
-.manual-check{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}.manual-check input{min-width:0}.scan-result{margin-top:12px;min-height:44px;padding:11px 12px;border-radius:10px;background:#0d0a0b;color:#b9ad9f;font-size:12px;line-height:1.5}.scan-result.success{border:1px solid rgba(95,170,115,.25);color:#bfe8c7;background:rgba(95,170,115,.08)}.scan-result.error{border:1px solid rgba(220,100,100,.25);color:#ffc0c0;background:rgba(220,100,100,.07)}
+.manual-check{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}.manual-check input{min-width:0}.scan-result{margin-top:12px;min-height:56px;padding:16px 18px;border-radius:12px;background:#0d0a0b;color:#b9ad9f;font-size:19px;font-weight:700;line-height:1.45;text-align:center;white-space:pre-line}.scan-result.success{border:2px solid #2ecc71;color:#fff;background:#1a6b3a}.scan-result.error{border:2px solid #ff6b6b;color:#fff;background:#8b1e1e}
 @media(max-width:650px){.event-details>div{display:block}.event-details span{display:block;margin-top:3px}.manual-check{grid-template-columns:1fr}.modal-card{padding:15px}}
 
 /* ===== MOBILE EXPORT / DIGITAL TICKET ===== */
@@ -1436,7 +1438,7 @@ function payload(){
     token:$('ticketToken').value||''
   };
 }
-function toast(t){const el=$('toast');if(!el)return;el.textContent=t;el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2400)}
+function toast(t,type=''){const el=$('toast');if(!el)return;el.textContent=t;el.className='toast'+(type?' '+type:'');el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2400)}
 function status(t,error=false){$('statusText').textContent=t;$('status').classList.toggle('error',error);$('status').classList.add('show');clearTimeout(window.__status);window.__status=setTimeout(()=>$('status').classList.remove('show'),3800)}
 function randomToken(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1470,7 +1472,7 @@ function normalizeHistory(list){
       entered:!!x.entered,
       enteredAt:x.enteredAt||null,
       created:x.created||new Date().toISOString(),
-      phone:x.phone||''
+      phone:normalizePhone(x.phone||'')
     }))
     .filter(x=>/^\d{4,5}$/.test(x.serial));
 }
@@ -1771,28 +1773,44 @@ async function supabaseHealthCheck(){
   if(error)throw error;
   return true;
 }
+function mapCloudRow(row){
+  const parsed=parseCloudQR(row.qr_token);
+  if(!parsed)return null;
+  return{
+    name:String(row.full_name||''),phone:normalizePhone(row.phone||''),
+    type:parsed.type||'ספר',serial:String(parsed.serial),token:String(parsed.token||''),
+    created:row.created_at||new Date().toISOString(),entered:row.Scanned===true,
+    enteredAt:row.scanned_at||null,cloudId:row.id
+  };
+}
 async function cloudFetchTickets(){
   const {data,error}=await initSupabase().from('tickets')
     .select('id,created_at,full_name,phone,qr_token,Scanned,scanned_at')
     .order('created_at',{ascending:false});
   if(error)throw error;
-  return (Array.isArray(data)?data:[]).map(row=>{
-    const parsed=parseCloudQR(row.qr_token);
-    if(!parsed)return null;
-    return{
-      name:String(row.full_name||''),phone:normalizePhone(row.phone||''),
-      type:parsed.type||'ספר',serial:String(parsed.serial),token:String(parsed.token||''),
-      created:row.created_at||new Date().toISOString(),entered:row.Scanned===true,
-      enteredAt:row.scanned_at||null,cloudId:row.id
-    };
-  }).filter(Boolean);
+  return (Array.isArray(data)?data:[]).map(mapCloudRow).filter(Boolean);
+}
+async function cloudFetchTicketBySerial(serial){
+  const {data,error}=await initSupabase().from('tickets')
+    .select('id,created_at,full_name,phone,qr_token,Scanned,scanned_at')
+    .eq('id',Number(serial))
+    .maybeSingle();
+  if(error)throw error;
+  return data?mapCloudRow(data):null;
+}
+async function cloudSerialExists(serial){
+  const {data,error}=await initSupabase().from('tickets')
+    .select('id').eq('id',Number(serial)).limit(1);
+  if(error)throw error;
+  return Array.isArray(data)&&data.length>0;
 }
 async function cloudFindPhone(phone){
-  const local=normalizePhone(phone);
-  const national=local.replace(/^0/,'');
-  const variants=[...new Set([local, '+972'+national, '972'+national, String(phone||'').trim()].filter(Boolean))];
+  // Phones are stored canonically as 05XXXXXXXX. Run one-time Supabase migration
+  // for legacy +972 rows before relying on this exact-match lookup.
+  const canonical=normalizePhone(phone);
+  if(!canonical)return null;
   const {data,error}=await initSupabase().from('tickets')
-    .select('id,phone').in('phone',variants).limit(1);
+    .select('id,phone').eq('phone',canonical).limit(1);
   if(error)throw error;
   return Array.isArray(data)&&data.length?data[0]:null;
 }
@@ -1878,15 +1896,13 @@ async function saveTicket(){
   let serial=d.serial;
   if(isNew){
     try{
-      const remoteTickets=await cloudFetchTickets();
-      const usedRemote=new Set(remoteTickets.map(x=>String(x.serial)));
       let attempts=0;
       do{
         serial=nextSerial();
         attempts++;
-      }while(usedRemote.has(String(serial)) && attempts<300);
+      }while(await cloudSerialExists(serial) && attempts<300);
 
-      if(usedRemote.has(String(serial))){
+      if(await cloudSerialExists(serial)){
         status('לא ניתן להקצות מספר כרטיס ייחודי. נסה שוב.',true);
         return;
       }
@@ -1922,9 +1938,25 @@ async function saveTicket(){
       try{
         inserted=await cloudInsertTicket(item);
       }catch(firstError){
-        console.warn('First Supabase INSERT failed; retrying once',firstError);
-        await new Promise(r=>setTimeout(r,500));
-        inserted=await cloudInsertTicket(item);
+        const dupMsg=String(firstError?.message||firstError?.details||'');
+        if(/duplicate|unique/i.test(dupMsg)){
+          item.serial=nextSerial();
+          let dupAttempts=0;
+          while(await cloudSerialExists(item.serial) && dupAttempts<300){
+            item.serial=nextSerial();
+            dupAttempts++;
+          }
+          item.token=randomToken();
+          serial=item.serial;
+          $('serial').value=item.serial;
+          $('ticketToken').value=item.token;
+          makeQR();
+          inserted=await cloudInsertTicket(item);
+        }else{
+          console.warn('First Supabase INSERT failed; retrying once',firstError);
+          await new Promise(r=>setTimeout(r,500));
+          inserted=await cloudInsertTicket(item);
+        }
       }
       if(inserted?.id) item.cloudId=inserted.id;
       if(inserted?.created_at) item.created=inserted.created_at;
@@ -2037,8 +2069,8 @@ function getFilteredHistory(){
   });
 }
 function updateCount(){
-  const el=$('historyCount')||$('totalCount')||$('count');
-  if(el)el.textContent=String(historyCache.length);
+  const el=$('countStat');
+  if(el)el.textContent=historyCache.length+' כרטיסים';
 }
 function renderHistory(){
   const h=getFilteredHistory();
@@ -2100,8 +2132,7 @@ async function verifyTicketData(data){
   // Always refresh from Supabase before accepting entry.
   let x=historyCache.find(t=>String(t.serial)===serial);
   try{
-    const remote=await cloudFetchTickets();
-    const remoteTicket=remote.find(t=>String(t.serial)===serial);
+    const remoteTicket=await cloudFetchTicketBySerial(serial);
     if(remoteTicket){
       x=remoteTicket;
       const idx=historyCache.findIndex(t=>String(t.serial)===serial);
@@ -2118,7 +2149,7 @@ async function verifyTicketData(data){
     return{ok:false,msg:'ה־QR אינו תואם לכרטיס שהונפק.'};
 
   if(x.entered)
-    return{ok:true,already:true,msg:`הכרטיס של ${x.name} כבר סומן כנכנס ב־${formatDate(x.enteredAt)}.`};
+    return{ok:true,already:true,msg:`כבר נסרק — ${x.name}\nהכרטיס כבר סומן כנכנס ב־${formatDate(x.enteredAt)}`};
 
   const scanTime=new Date().toISOString();
 
@@ -2138,9 +2169,9 @@ async function verifyTicketData(data){
   renderHistory();
 
   if(!saved){
-    return{ok:true,msg:`✓ הכניסה נרשמה ב-Supabase — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
+    return{ok:true,msg:`כניסה אושרה — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
   }
-  return{ok:true,msg:`✓ הכניסה אושרה ונרשמה — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
+  return{ok:true,msg:`כניסה אושרה — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
 }
 let cameraStream=null;
 let nativeScanTimer=null;
@@ -2151,6 +2182,12 @@ function setScanResult(text,type=''){
   const el=$('scanResult');
   el.className='scan-result '+type;
   el.textContent=text||'';
+}
+function applyScanResult(result){
+  const type=result.ok?(result.already?'error':'success'):'error';
+  setScanResult(result.msg,type);
+  if(result.ok&&!result.already)toast('כניסה אושרה','success');
+  else if(result.ok&&result.already)toast('כבר נסרק','error');
 }
 function clearNativeCamera(){
   if(nativeScanTimer){cancelAnimationFrame(nativeScanTimer);nativeScanTimer=null}
@@ -2166,11 +2203,16 @@ function clearNativeCamera(){
 async function handleScan(text){
   if(scannerBusy)return;
   const result=await verifyTicketData(decodeQR(text));
-  setScanResult(result.msg,result.ok?'success':'error');
-  if(result.ok&&!result.already)toast('הכניסה נרשמה בהצלחה');
-  if(result.ok){
+  applyScanResult(result);
+  if(result.ok&&!result.already){
     scannerBusy=true;
-    setTimeout(()=>{if($('scannerModal').classList.contains('open'))closeScanner()},1400);
+    setTimeout(()=>{
+      if($('scannerModal').classList.contains('open'))closeScanner();
+      else scannerBusy=false;
+    },2000);
+  }else if(result.ok&&result.already){
+    scannerBusy=true;
+    setTimeout(()=>{scannerBusy=false},2000);
   }
 }
 async function startNativeBarcodeScanner(){
@@ -2330,14 +2372,8 @@ async function verifyManual(){
     setScanResult('הזן מספר כרטיס תקין, למשל 58321.','error');
     return;
   }
-  const normalized=serial;
-  const x=historyCache.find(t=>t.serial===normalized);
-  if(!x){
-    setScanResult('הכרטיס לא נמצא במערכת.','error');
-    return;
-  }
-  const result=await verifyTicketData({v:3,serial:x.serial,token:x.token});
-  setScanResult(result.msg,result.ok?'success':'error');
+  const result=await verifyTicketData({v:3,serial,token:''});
+  applyScanResult(result);
 }
 async function waitForQR(){const box=$('qrcode');for(let i=0;i<80;i++){const c=box?.querySelector('canvas');if(c&&c.width>0&&c.height>0)return true;await new Promise(r=>setTimeout(r,50))}return false}
 async function renderCanvas(){await waitForQR();const ticket=$('ticket');const oldClass=ticket.className,oldW=ticket.style.width,oldH=ticket.style.height;ticket.classList.add('export-mobile');ticket.style.width='1080px';ticket.style.height='1920px';await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(document.fonts?.ready)await document.fonts.ready;const imgs=[...ticket.querySelectorAll('img')];await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=img.onerror=res})));const canvas=await html2canvas(ticket,{scale:1,width:1080,height:1920,useCORS:true,backgroundColor:null,logging:false,imageTimeout:15000,foreignObjectRendering:false});ticket.className=oldClass;ticket.style.width=oldW;ticket.style.height=oldH;return canvas}
