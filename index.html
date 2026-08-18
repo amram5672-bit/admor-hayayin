@@ -170,8 +170,8 @@ input:focus,select:focus{
 .security{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
 .serial{font-family:ui-monospace,SFMono-Regular,monospace;color:#e8cf74;font-size:11px;letter-spacing:.4px}
 .security-sub{font-size:9px;color:#81766d;margin-top:4px}
-.qr{width:124px;height:124px;padding:9px;border-radius:9px;background:#fff;display:grid;place-items:center;box-shadow:0 8px 18px rgba(0,0,0,.25)}
-.qr canvas,.qr img{width:106px!important;height:106px!important}
+.qr{width:96px;height:96px;flex:0 0 96px;padding:7px;border-radius:10px;background:#fff;display:grid;place-items:center;overflow:hidden;box-shadow:0 8px 18px rgba(0,0,0,.25)}
+.qr canvas,.qr img{display:block;width:82px!important;height:82px!important;max-width:100%;max-height:100%}
 .holo{position:absolute;right:10px;top:42px;width:5px;height:92px;border-radius:5px;background:linear-gradient(180deg,#fff,#d4af37,#9be3ff,#fff,#d4af37);opacity:.55;box-shadow:0 0 12px rgba(255,255,255,.35)}
 .tear{position:absolute;bottom:0;left:0;right:0;border-top:1px dashed rgba(236,213,138,.4);z-index:2}
 
@@ -1414,6 +1414,28 @@ let draftPending=false;
 let editingSerial=null;
 const EVENT={title:'פסטיבל היין והשקת ספר היין',subtitle:'מהאדמה לנשמה',date:'29/09/2026',time:'17:00',day:'יום שלישי · חול המועד סוכות',venue:'מלון ירמיהו',address:'רחוב ירמיהו 33, ירושלים'};
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function normalizePhone(p){
+  let d=String(p||'').replace(/\D/g,'');
+  if(!d)return '';
+  if(d.startsWith('972')) d='0'+d.slice(3);
+  else if(d.length===9 && d.startsWith('5')) d='0'+d;
+  return d;
+}
+function formatDate(iso){
+  if(!iso)return '—';
+  try{
+    return new Intl.DateTimeFormat('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso));
+  }catch{return '—'}
+}
+function payload(){
+  return{
+    name:$('name').value.trim(),
+    phone:$('phone').value.trim(),
+    type:$('type').value,
+    serial:$('serial').value,
+    token:$('ticketToken').value||''
+  };
+}
 function toast(t){const el=$('toast');if(!el)return;el.textContent=t;el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2400)}
 function status(t,error=false){$('statusText').textContent=t;$('status').classList.toggle('error',error);$('status').classList.add('show');clearTimeout(window.__status);window.__status=setTimeout(()=>$('status').classList.remove('show'),3800)}
 function randomToken(){
@@ -1547,11 +1569,11 @@ async function persistOneTicket(ticket){
           full_name:normalized.name,
           phone:normalizePhone(normalized.phone),
           qr_token:buildCloudQR(normalized),
-          scanned:normalized.entered===true,
+          Scanned:normalized.entered===true,
           scanned_at:normalized.enteredAt||null
         })
         .eq('id',normalized.cloudId)
-        .select('id,created_at,full_name,phone,qr_token,scanned,scanned_at')
+        .select('id,created_at,full_name,phone,qr_token,Scanned,scanned_at')
         .single();
       if(error)throw error;
       cloudRow=data;
@@ -1562,7 +1584,7 @@ async function persistOneTicket(ticket){
 
     normalized.cloudId=cloudRow.id;
     normalized.created=cloudRow.created_at||normalized.created;
-    normalized.entered=cloudRow.scanned===true;
+    normalized.entered=cloudRow.Scanned===true;
     normalized.enteredAt=cloudRow.scanned_at||null;
 
     // Only after DB success, update the local cache.
@@ -1674,15 +1696,15 @@ function makeQR(){
       if(my!==qrRenderToken)return;
       const c=box.querySelector('canvas');
       const img=box.querySelector('img');
-      for(const el of [c,img]){
-        if(el){
-          el.style.display='block';
-          el.style.width='100%';
-          el.style.height='100%';
-          el.style.maxWidth='none';
-          el.style.maxHeight='none';
-          el.setAttribute('aria-label','QR '+text);
-        }
+      const rendered=c||img;
+      if(c)c.style.setProperty('display',rendered===c?'block':'none','important');
+      if(img)img.style.setProperty('display',rendered===img?'block':'none','important');
+      if(rendered){
+        rendered.style.width='100%';
+        rendered.style.height='100%';
+        rendered.style.maxWidth='none';
+        rendered.style.maxHeight='none';
+        rendered.setAttribute('aria-label','QR '+text);
       }
     });
   }catch(e){
@@ -1751,7 +1773,7 @@ async function supabaseHealthCheck(){
 }
 async function cloudFetchTickets(){
   const {data,error}=await initSupabase().from('tickets')
-    .select('id,created_at,full_name,phone,qr_token,scanned,scanned_at')
+    .select('id,created_at,full_name,phone,qr_token,Scanned,scanned_at')
     .order('created_at',{ascending:false});
   if(error)throw error;
   return (Array.isArray(data)?data:[]).map(row=>{
@@ -1760,14 +1782,17 @@ async function cloudFetchTickets(){
     return{
       name:String(row.full_name||''),phone:normalizePhone(row.phone||''),
       type:parsed.type||'ספר',serial:String(parsed.serial),token:String(parsed.token||''),
-      created:row.created_at||new Date().toISOString(),entered:row.scanned===true,
+      created:row.created_at||new Date().toISOString(),entered:row.Scanned===true,
       enteredAt:row.scanned_at||null,cloudId:row.id
     };
   }).filter(Boolean);
 }
 async function cloudFindPhone(phone){
+  const local=normalizePhone(phone);
+  const national=local.replace(/^0/,'');
+  const variants=[...new Set([local, '+972'+national, '972'+national, String(phone||'').trim()].filter(Boolean))];
   const {data,error}=await initSupabase().from('tickets')
-    .select('id,phone').eq('phone',normalizePhone(phone)).limit(1);
+    .select('id,phone').in('phone',variants).limit(1);
   if(error)throw error;
   return Array.isArray(data)&&data.length?data[0]:null;
 }
@@ -1778,12 +1803,12 @@ async function cloudInsertTicket(item){
     full_name:item.name,
     phone:normalizePhone(item.phone),
     qr_token:buildCloudQR(item),
-    scanned:false,
+    Scanned:false,
     scanned_at:null
   };
   const {data,error}=await initSupabase().from('tickets')
     .insert(row)
-    .select('id,created_at,full_name,phone,qr_token,scanned,scanned_at')
+    .select('id,created_at,full_name,phone,qr_token,Scanned,scanned_at')
     .single();
   if(error)throw error;
   if(!data?.id)throw new Error('Supabase did not return the inserted ticket.');
@@ -1793,9 +1818,9 @@ async function cloudSaveEntry(item){
   if(item?.cloudId===undefined||item?.cloudId===null)throw new Error('SUPABASE_NO_ROW_ID');
   const scannedAt=item.enteredAt||new Date().toISOString();
   const {data,error}=await initSupabase().from('tickets')
-    .update({scanned:true,scanned_at:scannedAt})
+    .update({Scanned:true,scanned_at:scannedAt})
     .eq('id',item.cloudId)
-    .select('id,scanned,scanned_at').single();
+    .select('id,Scanned,scanned_at').single();
   if(error)throw error;
   return data;
 }
@@ -1965,7 +1990,13 @@ async function deleteTicket(serial){
   const x=historyCache.find(t=>t.serial===serial);
   if(!x)return;
 
-  if(!confirm('למחוק לצמיתות את הכרטיס '+serial+' של '+(x.name||'')+'?\\n\\nהמחיקה תתבצע גם מ-Supabase ולא ניתן לבטל אותה.'))return;
+  const deleteMessage=[
+    'למחוק את הכרטיס של '+(x.name||'אורח ללא שם')+'?',
+    'מספר כרטיס: '+serial,
+    '',
+    'הפעולה אינה ניתנת לביטול.'
+  ].join('\n');
+  if(!confirm(deleteMessage))return;
 
   if(!x.cloudId){
     status('לכרטיס הזה אין מזהה Supabase. רענן את ההיסטוריה ונסה שוב.',true);
@@ -2000,7 +2031,7 @@ function getFilteredHistory(){
     const statusText=x.entered?'נכנס':'טרם נכנס';
 
     return name.includes(q)
-      || phone.includes(qPhone)
+      || (qPhone!=='' && phone.includes(qPhone))
       || serial.includes(q)
       || statusText.includes(q);
   });
@@ -2337,8 +2368,6 @@ window.addEventListener('beforeunload',()=>{
       $('storageStat').textContent='⚠ Supabase לא מחובר';
       status(cloudErrorMessage(e),true);
     }
-
-    await syncCloudHistory();
 
     draftPending=true;
     editingSerial=null;
