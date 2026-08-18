@@ -1584,22 +1584,7 @@ async function hydrateStorage(){
   updateCount();
   return historyCache;
 }
-function nextSerial(){
-  const used=new Set(historyCache.map(x=>String(x.serial||'')));
-  let candidate='';
-  let attempts=0;
-  do{
-    candidate=String(Math.floor(10000+Math.random()*90000));
-    attempts++;
-  }while(used.has(candidate) && attempts<200);
-  if(used.has(candidate)){
-    for(let n=10000;n<=99999;n++){
-      const s=String(n);
-      if(!used.has(s)){candidate=s;break}
-    }
-  }
-  return candidate;
-}
+
 function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
 function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
 async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4,5}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
@@ -1642,7 +1627,7 @@ function update(){const d=payload();$('pname').textContent=d.name||'שם האו�
 function makeQR(){
   const box=$('qrcode');
   if(!box||!window.QRCode)return;
-  const serial=$('serial').value||'0000';
+  const serial=$('serial').value||'00000';
   let token=$('ticketToken').value;
   if(!token){token=randomToken();$('ticketToken').value=token}
   // Keep the encoded value intentionally short for reliable phone-camera scanning.
@@ -1717,7 +1702,7 @@ async function cloudInsertTicket(item){
   };
   const res=await fetch(SUPABASE_TICKETS_URL,{
     method:'POST',
-    headers:cloudHeaders({'Prefer':'return=minimal'}),
+    headers:cloudHeaders({'Prefer':'return=representation'}),
     body:JSON.stringify(row),
     cache:'no-store'
   });
@@ -1728,12 +1713,71 @@ async function cloudInsertTicket(item){
     err.status=res.status;err.detail=detail;
     throw err;
   }
-  return true;
+  const rows=await res.json().catch(()=>[]);
+  return Array.isArray(rows)?rows[0]:rows;
 }
+function parseCloudQR(qr){
+  const t=String(qr||'').trim();
+
+  // Current format: WF26|12345|TOKEN|S/M/E
+  if(t.startsWith('WF26|')){
+    const a=t.split('|');
+    if(a.length>=4 && /^\d{4,5}$/.test(a[1])){
+      return {
+        serial:String(a[1]),
+        token:String(a[2]||''),
+        type:codeType(a[3])
+      };
+    }
+    if(a.length===3 && /^\d{4,5}$/.test(a[1])){
+      return {serial:String(a[1]),token:String(a[2]||''),type:'ספר'};
+    }
+  }
+
+  // Previous formats used by earlier versions.
+  if(t.startsWith('WINEFEST2|')){
+    const a=t.split('|');
+    if(a.length>=3 && /^\d{4,5}$/.test(a[1]))
+      return {serial:String(a[1]),token:String(a[2]||''),type:'ספר'};
+  }
+
+  // Older format: WINEFEST|base64(JSON)
+  if(t.startsWith('WINEFEST|')){
+    try{
+      const raw=atob(t.slice(9));
+      const json=decodeURIComponent(Array.from(raw).map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+      const obj=JSON.parse(json);
+      if(obj?.serial && /^\d{4,5}$/.test(String(obj.serial))){
+        return {
+          serial:String(obj.serial),
+          token:String(obj.token||''),
+          type:obj.type||'ספר'
+        };
+      }
+    }catch{}
+  }
+
+  // Very old/local format: serial|token
+  const simple=t.match(/^(\d{4,5})\|([A-Za-z0-9]+)$/);
+  if(simple){
+    return {serial:simple[1],token:simple[2],type:'ספר'};
+  }
+
+  // Last-resort legacy value containing only the serial.
+  if(/^\d{4,5}$/.test(t)){
+    return {serial:t,token:'',type:'ספר'};
+  }
+
+  return null;
+}
+
 async function cloudFetchTickets(){
-  const res=await fetch(SUPABASE_TICKETS_URL+'?select=id,created_at,full_name,phone,qr_token,scanned,scanned_at&order=created_at.desc',{
-    method:'GET',headers:cloudHeaders(),cache:'no-store'
-  });
+  const res=await fetch(
+    SUPABASE_TICKETS_URL+
+    '?select=id,created_at,full_name,phone,qr_token,scanned,scanned_at&order=created_at.desc',
+    {method:'GET',headers:cloudHeaders(),cache:'no-store'}
+  );
+
   if(!res.ok){
     let detail='';
     try{detail=await res.text()}catch{}
@@ -1741,19 +1785,19 @@ async function cloudFetchTickets(){
     err.status=res.status;err.detail=detail;
     throw err;
   }
+
   const rows=await res.json();
+
   return (Array.isArray(rows)?rows:[]).map(row=>{
-    const parts=String(row.qr_token||'').split('|');
-    const serial=/^\d{4,5}$/.test(parts[1]||'')?String(parts[1]):'';
-    const token=parts[2]||'';
-    const type=codeType(parts[3]);
-    if(!serial)return null;
+    const parsed=parseCloudQR(row.qr_token);
+    if(!parsed)return null;
+
     return {
-      name:row.full_name||'',
-      phone:row.phone||'',
-      type,
-      serial,
-      token,
+      name:String(row.full_name||''),
+      phone:normalizePhone(row.phone||''),
+      type:parsed.type||'ספר',
+      serial:String(parsed.serial),
+      token:String(parsed.token||''),
       created:row.created_at||new Date().toISOString(),
       entered:row.scanned===true,
       enteredAt:row.scanned_at||null,
@@ -1761,6 +1805,7 @@ async function cloudFetchTickets(){
     };
   }).filter(Boolean);
 }
+
 async function cloudSaveEntry(item){
   if(!item?.cloudId) throw new Error('SUPABASE_NO_ROW_ID');
   const scannedAt=item.enteredAt||new Date().toISOString();
@@ -1793,17 +1838,26 @@ function cloudErrorMessage(err){
 async function syncCloudHistory(){
   try{
     const remote=await cloudFetchTickets();
-    if(remote.length){
-      historyCache=mergeHistories(remote,historyCache);
-      for(const ticket of historyCache) await putTicketDB(ticket);
-      safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
-      renderHistory();updateCount();
-    }
+
+    const remoteBySerial=new Map(remote.map(x=>[String(x.serial),x]));
+    const localOnly=historyCache.filter(x=>!remoteBySerial.has(String(x.serial)));
+
+    // Supabase is authoritative for records that exist there.
+    // This prevents local stale copies from overwriting cloud scanned state,
+    // QR token, phone or cloudId.
+    historyCache=mergeHistories(remote,localOnly);
+
+    for(const ticket of historyCache) await putTicketDB(ticket);
+    safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
+
+    renderHistory();
+    updateCount();
     $('storageStat').textContent='✓ Supabase + מכשיר';
     return true;
   }catch(err){
-    console.warn('Supabase history sync:',err);
-    $('storageStat').textContent='✓ נשמר במכשיר · ענן לא מסונכרן';
+    console.error('Supabase history sync failed:',err);
+    $('storageStat').textContent='⚠ Supabase לא מסונכרן';
+    status('לא ניתן לטעון את ההיסטוריה מ-Supabase. בדוק חיבור והרשאות RLS.',true);
     return false;
   }
 }
@@ -1857,11 +1911,31 @@ async function saveTicket(){
 
   let serial=d.serial;
   if(isNew){
-    serial=nextSerial();
+    try{
+      const remoteTickets=await cloudFetchTickets();
+      const usedRemote=new Set(remoteTickets.map(x=>String(x.serial)));
+      let attempts=0;
+      do{
+        serial=nextSerial();
+        attempts++;
+      }while(usedRemote.has(String(serial)) && attempts<300);
+
+      if(usedRemote.has(String(serial))){
+        status('לא ניתן להקצות מספר כרטיס ייחודי. נסה שוב.',true);
+        return;
+      }
+    }catch(err){
+      console.error('Supabase serial uniqueness check failed:',err);
+      status('לא ניתן לבדוק מספר כרטיס מול Supabase. ההנפקה נעצרה.',true);
+      return;
+    }
+
     d.serial=serial;
     d.token=randomToken();
     $('serial').value=serial;
     $('ticketToken').value=d.token;
+    // Re-render immediately so the new random 5-digit number and QR are visible.
+    makeQR();
   }
 
   const old=historyCache.find(x=>x.serial===serial);
@@ -1878,14 +1952,9 @@ async function saveTicket(){
 
   if(isNew){
     try{
-      await cloudInsertTicket(item);
-      // Reload the cloud row so we have its DB id.
-      const remote=await cloudFetchTickets();
-      const saved=remote.find(x=>x.serial===item.serial);
-      if(saved){
-        item.cloudId=saved.cloudId;
-        item.created=saved.created;
-      }
+      const inserted=await cloudInsertTicket(item);
+      if(inserted?.id) item.cloudId=inserted.id;
+      if(inserted?.created_at) item.created=inserted.created_at;
     }catch(err){
       console.error('Supabase INSERT failed:',err);
       status(cloudErrorMessage(err),true);
@@ -2304,7 +2373,7 @@ safeLocalRemove(DRAFT_KEY);
 await idbRemove(DRAFT_KEY);
 $('serial').value=nextSerial();
 $('ticketToken').value=randomToken();
-update();$('storageStat').textContent='✓ נשמר במכשיר';if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});})().catch(e=>{console.error(e);storageReady=true;status('אירעה שגיאה בטעינת האפליקציה',true)});
+update();if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});})().catch(e=>{console.error(e);storageReady=true;status('אירעה שגיאה בטעינת האפליקציה',true)});
 </script>
 </body>
 </html>
