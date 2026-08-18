@@ -1,5 +1,5 @@
 
-const CACHE='admor-hayayin-phone-v2';
+const CACHE='admor-hayayin-phone-v4';
 const LOCAL=[
  './',
  './index.html',
@@ -24,14 +24,26 @@ self.addEventListener('activate',event=>{
  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
  self.clients.claim();
 });
+function isAppShell(url){
+ return url.pathname.endsWith('/index.html')||url.pathname.endsWith('/');
+}
 self.addEventListener('fetch',event=>{
  if(event.request.method!=='GET') return;
+ const url=new URL(event.request.url);
+ if(isAppShell(url)){
+  event.respondWith(fetch(event.request).then(resp=>{
+   const copy=resp.clone();
+   caches.open(CACHE).then(c=>c.put(event.request,copy)).catch(()=>{});
+   return resp;
+  }).catch(()=>caches.match('./index.html')));
+  return;
+ }
  event.respondWith(caches.match(event.request).then(cached=>{
-   if(cached)return cached;
-   return fetch(event.request).then(resp=>{
-     const copy=resp.clone();
-     caches.open(CACHE).then(c=>c.put(event.request,copy)).catch(()=>{});
-     return resp;
-   }).catch(()=>caches.match('./index.html'));
+  if(cached)return cached;
+  return fetch(event.request).then(resp=>{
+   const copy=resp.clone();
+   caches.open(CACHE).then(c=>c.put(event.request,copy)).catch(()=>{});
+   return resp;
+  }).catch(()=>caches.match('./index.html'));
  }));
 });
