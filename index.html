@@ -1672,6 +1672,24 @@ function makeQR(){
 const SUPABASE_URL='https://iklattjtillfgicbalvw.supabase.co';
 const SUPABASE_KEY='sb_publishable_YToeFaf4-iV3TYZPCXkE4g_RKsUb0Ux';
 const SUPABASE_TICKETS_URL=SUPABASE_URL+'/rest/v1/tickets';
+function supabaseIsConfigured(){
+  return Boolean(SUPABASE_URL && SUPABASE_KEY && SUPABASE_TICKETS_URL);
+}
+async function supabaseHealthCheck(){
+  if(!supabaseIsConfigured()) throw new Error('SUPABASE_CONFIG_MISSING');
+  const res=await fetch(
+    SUPABASE_TICKETS_URL+'?select=id&limit=1',
+    {method:'GET',headers:cloudHeaders(),cache:'no-store'}
+  );
+  const body=await res.text();
+  if(!res.ok){
+    const err=new Error('SUPABASE_HEALTH_'+res.status);
+    err.status=res.status;err.detail=body;
+    throw err;
+  }
+  return true;
+}
+
 
 function typeCode(type){
   return type==='מארז'?'M':type==='כניסה'?'E':'S';
@@ -1830,11 +1848,18 @@ async function cloudSaveEntry(item){
   return Array.isArray(rows)?rows[0]:rows;
 }
 function cloudErrorMessage(err){
+  console.error('Supabase error:',err?.status,err?.detail||err);
   if(err?.status===401||err?.status===403)
-    return 'Supabase דחה את ההרשאה. בדוק את RLS Policy של INSERT בטבלת tickets.';
-  if(err?.status>=500)return 'Supabase לא זמין כרגע. הכרטיס נשמר מקומית.';
-  return 'לא ניתן לשמור כרגע ב־Supabase. הכרטיס נשמר מקומית.';
+    return 'Supabase דחה את הבקשה. בדוק את ה־RLS Policy ואת ה־Publishable Key.';
+  if(err?.status===400)
+    return 'Supabase החזיר 400. בדוק שהעמודות scanned ו־scanned_at קיימות וששמות העמודות נכונים.';
+  if(err?.status===404)
+    return 'Supabase לא מצא את טבלת tickets או את כתובת ה־API.';
+  if(err?.status>=500)
+    return 'Supabase לא זמין כרגע.';
+  return 'שגיאת Supabase. פתח את Console בדפדפן לפרטים.';
 }
+
 async function syncCloudHistory(){
   try{
     const remote=await cloudFetchTickets();
@@ -1863,6 +1888,7 @@ async function syncCloudHistory(){
 }
 
 async function saveTicket(){
+  status('שולח את הכרטיס ל־Supabase…');
   if(!storageReady){
     status('המערכת עדיין טוענת את ההיסטוריה. נסה שוב בעוד רגע.',true);
     return;
@@ -1952,7 +1978,14 @@ async function saveTicket(){
 
   if(isNew){
     try{
-      const inserted=await cloudInsertTicket(item);
+      let inserted;
+      try{
+        inserted=await cloudInsertTicket(item);
+      }catch(firstError){
+        console.warn('First Supabase INSERT failed; retrying once',firstError);
+        await new Promise(r=>setTimeout(r,500));
+        inserted=await cloudInsertTicket(item);
+      }
       if(inserted?.id) item.cloudId=inserted.id;
       if(inserted?.created_at) item.created=inserted.created_at;
     }catch(err){
@@ -2019,13 +2052,13 @@ async function deleteTicket(serial){
 
   if(!confirm('למחוק לצמיתות את הכרטיס '+serial+' של '+(x.name||'')+'?\\n\\nהמחיקה תתבצע גם מ-Supabase ולא ניתן לבטל אותה.'))return;
 
-  if(!x.remoteId){
+  if(!x.cloudId){
     status('לכרטיס הזה אין מזהה Supabase. רענן את ההיסטוריה ונסה שוב.',true);
     return;
   }
 
   try{
-    await deleteRemoteTicket(x.remoteId);
+    await deleteRemoteTicket(x.cloudId);
 
     // Remove only this record from local cache after the DB deletion succeeds.
     historyCache=historyCache.filter(t=>t.serial!==serial);
@@ -2365,15 +2398,43 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLower
 window.addEventListener('beforeunload',()=>{
   if(draftPending && !editingSerial) saveDraft();
 });
-(async function init(){document.getElementById('brandLogo').src=LOGO;document.getElementById('book').src=BOOK;const cleaned=await cleanupOldServiceWorker();if(cleaned)return;await hydrateStorage();
-await syncCloudHistory();
-draftPending=true;
-editingSerial=null;
-safeLocalRemove(DRAFT_KEY);
-await idbRemove(DRAFT_KEY);
-$('serial').value=nextSerial();
-$('ticketToken').value=randomToken();
-update();if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});})().catch(e=>{console.error(e);storageReady=true;status('אירעה שגיאה בטעינת האפליקציה',true)});
+(async function init(){
+  try{
+    document.getElementById('brandLogo').src=LOGO;
+    document.getElementById('book').src=BOOK;
+
+    // Clean old service workers/caches but NEVER abort application initialization.
+    try{await cleanupOldServiceWorker()}catch(e){console.warn('SW cleanup',e)}
+
+    await hydrateStorage();
+    await syncCloudHistory();
+
+    draftPending=true;
+    editingSerial=null;
+    safeLocalRemove(DRAFT_KEY);
+    await idbRemove(DRAFT_KEY);
+    $('serial').value=nextSerial();
+    $('ticketToken').value=randomToken();
+    update();
+
+    // Final connectivity check. This does not block the UI.
+    try{
+      await supabaseHealthCheck();
+      $('storageStat').textContent='✓ מחובר ל־Supabase';
+    }catch(e){
+      console.error('Supabase health check failed',e);
+      $('storageStat').textContent='⚠ Supabase לא מחובר';
+      status('Supabase לא זמין: '+(e?.detail||e?.message||'בדוק חיבור ו־RLS'),true);
+    }
+
+    if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
+  }catch(e){
+    console.error('Application init failed',e);
+    storageReady=true;
+    status('אירעה שגיאה בטעינת האפליקציה: '+(e?.message||''),true);
+  }
+})();
+
 </script>
 </body>
 </html>
