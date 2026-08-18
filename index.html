@@ -239,7 +239,13 @@ tbody tr:hover{background:rgba(255,255,255,.025)}
 .btn-scan{width:100%;margin-top:9px;border:1px solid rgba(236,213,138,.28);background:linear-gradient(180deg,rgba(236,213,138,.10),rgba(236,213,138,.04));color:#ead79c}
 .type-card{border-color:rgba(236,213,138,.20)!important}.event-card{border-color:rgba(255,255,255,.08)!important}.event-line{margin-top:9px;color:#a99d90;font-size:10px;line-height:1.5}
 .entry-status{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:10px}.entry-status.pending{background:rgba(255,255,255,.06);color:#c6b9a8}.entry-status.entered{background:rgba(95,170,115,.12);color:#b8e2c1;border:1px solid rgba(95,170,115,.18)}
-.modal{position:fixed;inset:0;background:rgba(5,4,4,.82);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:18px;z-index:1000}.modal.open{display:flex}.modal-card{width:min(560px,100%);background:#171215;border:1px solid rgba(236,213,138,.22);border-radius:18px;padding:20px;box-shadow:0 30px 100px #000c}.modal-head{display:flex;justify-content:space-between;align-items:flex-start}.modal-head h2{margin:4px 0 0;color:#f1dfaa}.modal-close{background:transparent!important;color:#d9c8ae!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:50%!important;width:34px;height:34px;padding:0!important;font-size:22px}.modal-help{font-size:12px;color:#aaa095;line-height:1.6}.modal #reader{width:100%;max-width:420px;margin:16px auto;border-radius:14px;overflow:hidden;background:#0c0a0b}.manual-check{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}.manual-check input{min-width:0}.scan-result{margin-top:12px;min-height:44px;padding:11px 12px;border-radius:10px;background:#0d0a0b;color:#b9ad9f;font-size:12px;line-height:1.5}.scan-result.success{border:1px solid rgba(95,170,115,.25);color:#bfe8c7;background:rgba(95,170,115,.08)}.scan-result.error{border:1px solid rgba(220,100,100,.25);color:#ffc0c0;background:rgba(220,100,100,.07)}
+.modal{position:fixed;inset:0;background:rgba(5,4,4,.82);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:18px;z-index:1000}.modal.open{display:flex}.modal-card{width:min(560px,100%);background:#171215;border:1px solid rgba(236,213,138,.22);border-radius:18px;padding:20px;box-shadow:0 30px 100px #000c}.modal-head{display:flex;justify-content:space-between;align-items:flex-start}.modal-head h2{margin:4px 0 0;color:#f1dfaa}.modal-close{background:transparent!important;color:#d9c8ae!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:50%!important;width:34px;height:34px;padding:0!important;font-size:22px}.modal-help{font-size:12px;color:#aaa095;line-height:1.6}.modal #reader{width:100%;max-width:420px;margin:16px auto;border-radius:14px;overflow:hidden;background:#0c0a0b}.camera-stage{position:relative;width:100%;max-width:420px;aspect-ratio:1/1;margin:16px auto;border-radius:14px;overflow:hidden;background:#050405;border:1px solid rgba(236,213,138,.12)}
+.camera-stage video{width:100%;height:100%;object-fit:cover;display:block}
+.camera-stage .scan-frame{position:absolute;inset:14%;border:2px solid rgba(236,213,138,.9);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.18);pointer-events:none}
+.camera-stage .scan-line{position:absolute;left:17%;right:17%;top:50%;height:2px;background:#f0d47a;box-shadow:0 0 14px rgba(240,212,122,.9);animation:scanline 1.8s ease-in-out infinite;pointer-events:none}
+@keyframes scanline{0%,100%{transform:translateY(-110px);opacity:.45}50%{transform:translateY(110px);opacity:1}}
+.camera-help{font-size:10px;color:#8e8278;text-align:center;margin-top:7px;line-height:1.5}
+.manual-check{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}.manual-check input{min-width:0}.scan-result{margin-top:12px;min-height:44px;padding:11px 12px;border-radius:10px;background:#0d0a0b;color:#b9ad9f;font-size:12px;line-height:1.5}.scan-result.success{border:1px solid rgba(95,170,115,.25);color:#bfe8c7;background:rgba(95,170,115,.08)}.scan-result.error{border:1px solid rgba(220,100,100,.25);color:#ffc0c0;background:rgba(220,100,100,.07)}
 @media(max-width:650px){.event-details>div{display:block}.event-details span{display:block;margin-top:3px}.manual-check{grid-template-columns:1fr}.modal-card{padding:15px}}
 
 /* ===== MOBILE EXPORT / DIGITAL TICKET ===== */
@@ -327,14 +333,17 @@ tbody tr:hover{background:rgba(255,255,255,.025)}
 .ticket.export-mobile .serial{font-size:19px!important;letter-spacing:.8px!important}
 .ticket.export-mobile .security-sub{font-size:16px!important;margin-top:8px!important;line-height:1.5!important}
 .ticket.export-mobile .qr{
-  width:250px!important;height:250px!important;
-  padding:16px!important;
-  border-radius:18px!important;
-  flex:0 0 250px!important;
+  width:320px!important;height:320px!important;
+  padding:18px!important;
+  border-radius:20px!important;
+  flex:0 0 320px!important;
+  background:#fff!important;
 }
 .ticket.export-mobile .qr canvas,
 .ticket.export-mobile .qr img{
-  width:218px!important;height:218px!important;
+  width:284px!important;height:284px!important;
+  max-width:none!important;max-height:none!important;
+  image-rendering:auto!important;
 }
 .ticket.export-mobile .holo{
   right:24px!important;top:78px!important;
@@ -1372,7 +1381,13 @@ html body .ticket.export-mobile .holo{z-index:3!important}
       <button class="modal-close" onclick="closeScanner()">×</button>
     </div>
     <p class="modal-help">סרוק את ה־QR שעל הכרטיס. המערכת תבדוק שהכרטיס הונפק במערכת ותסמן אותו כ״נכנס״.</p>
-    <div id="reader"></div>
+    <div id="cameraStage" class="camera-stage" hidden>
+      <video id="cameraVideo" playsinline muted autoplay></video>
+      <div class="scan-frame"></div>
+      <div class="scan-line"></div>
+    </div>
+    <div id="reader" hidden></div>
+    <div id="cameraHelp" class="camera-help">המצלמה תיפתח כאן. יש לאשר גישה למצלמה בפעם הראשונה.</div>
     <div class="manual-check">
       <input id="manualSerial" placeholder="או הזן מספר כרטיס, למשל 0001">
       <button class="btn btn-primary" onclick="verifyManual()">אימות</button>
@@ -1390,13 +1405,13 @@ document.getElementById('brandLogo').src=LOGO;
 document.getElementById('book').src=BOOK;
 
 const $=id=>document.getElementById(id);
-const DRAFT_KEY='wine_festival_draft_v7';
-const HISTORY_KEY='wine_festival_history_v7';
-const LEGACY_KEYS=['wine_festival_history_v6','wine_festival_history_v5'];
-const COUNTER_KEY='wine_festival_counter_v7';
+const DRAFT_KEY='wine_festival_draft_v10';
+const HISTORY_KEY='wine_festival_history_v10';
+const LEGACY_KEYS=['wine_festival_history_v9','wine_festival_history_v8','wine_festival_history_v7','wine_festival_history_v6','wine_festival_history_v5'];
+const COUNTER_KEY='wine_festival_counter_v10';
 const DB_NAME='AdmorHayayinDB';
 const DB_STORE='app';
-const APP_VERSION='9.0.0';
+const APP_VERSION='10.0.0';
 let historyCache=[];
 let dbPromise=null;
 let storageReady=false;
@@ -1422,7 +1437,7 @@ function randomToken(){
 function safeLocalGet(k,f=null){try{const v=localStorage.getItem(k);return v===null?f:v}catch{return f}}
 function safeLocalSet(k,v){try{localStorage.setItem(k,v);return true}catch{return false}}
 function safeLocalRemove(k){try{localStorage.removeItem(k);return true}catch{return false}}
-function openDB(){if(dbPromise)return dbPromise;if(!('indexedDB' in window))return Promise.resolve(null);dbPromise=new Promise(resolve=>{try{const req=indexedDB.open(DB_NAME,4);req.onupgradeneeded=()=>{
+function openDB(){if(dbPromise)return dbPromise;if(!('indexedDB' in window))return Promise.resolve(null);dbPromise=new Promise(resolve=>{try{const req=indexedDB.open(DB_NAME,5);req.onupgradeneeded=()=>{
   const db=req.result;
   if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE);
   if(!db.objectStoreNames.contains('tickets'))db.createObjectStore('tickets');
@@ -1625,11 +1640,11 @@ function makeQR(){
   try{
     new QRCode(box,{
       text,
-      width:600,
-      height:600,
+      width:800,
+      height:800,
       colorDark:'#111111',
       colorLight:'#ffffff',
-      correctLevel:QRCode.CorrectLevel.M
+      correctLevel:QRCode.CorrectLevel.L
     });
     requestAnimationFrame(()=>{
       if(my!==qrRenderToken)return;
@@ -1803,19 +1818,252 @@ $('historySearch').addEventListener('input',renderHistory);
 async function copySerial(){try{await navigator.clipboard.writeText($('serial').value);toast('המספר הסידורי הועתק')}catch{toast('לא ניתן להעתיק אוטומטית בדפדפן זה')}}
 function phoneIntl(p){p=(p||'').replace(/\D/g,'');if(p.startsWith('972'))return p;if(p.startsWith('0'))return'972'+p.slice(1);return p}
 function sendWhatsApp(){const d=payload();if(!d.name||!d.phone){status('יש להזין שם ומספר טלפון',true);return}const text=`שלום ${d.name},\n\nזהו הכרטיס האישי שלך ל${EVENT.title}.\n\nסוג כרטיס: ${d.type}\n\n${EVENT.day}\n${EVENT.date} · ${EVENT.time}\n${EVENT.venue}, ${EVENT.address}\n\nיש להציג את הכרטיס בכניסה. הצמיד יינתן במקום.\n\nמספר כרטיס: ${d.serial}\n\nאדמו"ר היין 🍷`;window.open('https://wa.me/'+phoneIntl(d.phone)+'?text='+encodeURIComponent(text),'_blank','noopener')}
-function decodeQR(text){const t=String(text||'').trim();if(t.startsWith('WF26|')){const a=t.split('|');if(a.length===3&&/^\d{4}$/.test(a[1])&&a[2])return{v:3,event:'WINE-FEST-2026',serial:a[1],token:a[2]}}if(t.startsWith('WINEFEST2|')){const a=t.split('|');if(a.length===3)return{v:2,event:'WINE-FEST-2026',serial:a[1],token:a[2]}}if(t.startsWith('WINEFEST|')){try{return JSON.parse(decodeURIComponent(escape(atob(t.slice(9)))))}catch{}}return null}
-async function verifyTicketData(data){if(!data?.serial)return{ok:false,msg:'QR לא תקין.'};const serial=String(data.serial).padStart(4,'0');const x=historyCache.find(t=>t.serial===serial);if(!x)return{ok:false,msg:'הכרטיס לא נמצא בהיסטוריה המקומית.'};if(data.token&&x.token&&data.token!==x.token)return{ok:false,msg:'ה־QR אינו תואם לכרטיס שהונפק.'};if(x.entered)return{ok:true,already:true,msg:`הכרטיס של ${x.name} כבר סומן כנכנס ב־${formatDate(x.enteredAt)}.`};x.entered=true;x.enteredAt=new Date().toISOString();await persistHistory(historyCache);renderHistory();return{ok:true,msg:`✓ הכניסה אושרה — ${x.name}`,name:x.name,type:x.type,serial:x.serial}}
-async function handleScan(text){const result=await verifyTicketData(decodeQR(text));const el=$('scanResult');el.className='scan-result '+(result.ok?'success':'error');el.textContent=result.msg;if(result.ok&&!result.already)toast('הכניסה נרשמה בהצלחה')}
-function openScanner(){$('scannerModal').classList.add('open');$('scannerModal').setAttribute('aria-hidden','false');$('scanResult').className='scan-result';$('scanResult').textContent='מפעיל מצלמה…';setTimeout(()=>{if(!window.Html5Qrcode){$('scanResult').className='scan-result error';$('scanResult').textContent='מנוע הסריקה לא נטען. השתמש באימות לפי מספר כרטיס.';return}qrScanner=new Html5Qrcode('reader');qrScanner.start({facingMode:{ideal:'environment'}},{fps:15,qrbox:{width:300,height:300},aspectRatio:1.0},text=>handleScan(text),()=>{}).catch(err=>{$('scanResult').className='scan-result error';$('scanResult').textContent='לא ניתן להפעיל מצלמה. אפשר להשתמש באימות לפי מספר.';console.error(err)})},120)}
-function closeScanner(){const finish=()=>{qrScanner=null;$('reader').innerHTML='';$('scannerModal').classList.remove('open');$('scannerModal').setAttribute('aria-hidden','true')};if(qrScanner){qrScanner.stop().then(finish).catch(finish)}else finish()}
-async function verifyManual(){const serial=$('manualSerial').value.trim().padStart(4,'0');const x=historyCache.find(t=>t.serial===serial);const el=$('scanResult');if(!x){el.className='scan-result error';el.textContent='הכרטיס לא נמצא במערכת.';return}const result=await verifyTicketData({v:3,serial:x.serial,token:x.token});el.className='scan-result '+(result.ok?'success':'error');el.textContent=result.msg}
+
+function decodeQR(text){
+  const t=String(text||'').trim();
+  if(t.startsWith('WF26|')){
+    const a=t.split('|');
+    if(a.length===3 && /^\d{4}$/.test(a[1]) && /^[A-Za-z0-9]+$/.test(a[2]))
+      return{v:3,event:'WINE-FEST-2026',serial:a[1],token:a[2]};
+  }
+  if(t.startsWith('WINEFEST2|')){
+    const a=t.split('|');
+    if(a.length===3 && /^\d{4}$/.test(a[1]) && a[2])
+      return{v:2,event:'WINE-FEST-2026',serial:a[1],token:a[2]};
+  }
+  if(t.startsWith('WINEFEST|')){
+    try{
+      const raw=atob(t.slice(9));
+      const json=decodeURIComponent(Array.from(raw).map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+      return JSON.parse(json);
+    }catch{}
+  }
+  // Accept a bare 4-digit value too, so a generic QR containing 0001 can
+  // still be checked manually.
+  if(/^\d{4}$/.test(t)) return {v:1,serial:t};
+  return null;
+}
+async function verifyTicketData(data){
+  if(!data?.serial)return{ok:false,msg:'QR לא תקין או לא שייך למערכת.'};
+  const serial=String(data.serial).padStart(4,'0');
+  const x=historyCache.find(t=>t.serial===serial);
+  if(!x)return{ok:false,msg:'הכרטיס לא נמצא בהיסטוריה המקומית.'};
+  if(data.token && x.token && data.token!==x.token)
+    return{ok:false,msg:'ה־QR אינו תואם לכרטיס שהונפק.'};
+  if(x.entered)
+    return{ok:true,already:true,msg:`הכרטיס של ${x.name} כבר סומן כנכנס ב־${formatDate(x.enteredAt)}.`};
+  x.entered=true;
+  x.enteredAt=new Date().toISOString();
+  const saved=await persistOneTicket(x);
+  if(!saved)return{ok:false,msg:'הכרטיס זוהה, אך לא ניתן היה לשמור את סימון הכניסה.'};
+  renderHistory();
+  return{ok:true,msg:`✓ הכניסה אושרה — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
+}
+
+let cameraStream=null;
+let nativeScanTimer=null;
+let scannerBusy=false;
+let scannerMode='';
+
+function setScanResult(text,type=''){
+  const el=$('scanResult');
+  el.className='scan-result '+type;
+  el.textContent=text||'';
+}
+function clearNativeCamera(){
+  if(nativeScanTimer){cancelAnimationFrame(nativeScanTimer);nativeScanTimer=null}
+  if(cameraStream){
+    for(const track of cameraStream.getTracks()) track.stop();
+    cameraStream=null;
+  }
+  const video=$('cameraVideo');
+  if(video){video.pause();video.srcObject=null}
+  scannerBusy=false;
+  scannerMode='';
+}
+async function handleScan(text){
+  if(scannerBusy)return;
+  const result=await verifyTicketData(decodeQR(text));
+  setScanResult(result.msg,result.ok?'success':'error');
+  if(result.ok&&!result.already)toast('הכניסה נרשמה בהצלחה');
+  if(result.ok){
+    scannerBusy=true;
+    setTimeout(()=>{if($('scannerModal').classList.contains('open'))closeScanner()},1400);
+  }
+}
+async function startNativeBarcodeScanner(){
+  if(!('BarcodeDetector' in window))return false;
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('CAMERA_API_UNAVAILABLE');
+  let supported=[];
+  try{supported=await BarcodeDetector.getSupportedFormats()}catch{}
+  if(supported.length && !supported.includes('qr_code'))return false;
+
+  const stage=$('cameraStage'),video=$('cameraVideo');
+  $('reader').hidden=true;
+  stage.hidden=false;
+  $('cameraHelp').textContent='כוון את המסגרת אל ה־QR. הסריקה מתבצעת אוטומטית.';
+  setScanResult('מבקש גישה למצלמה…');
+
+  cameraStream=await navigator.mediaDevices.getUserMedia({
+    audio:false,
+    video:{
+      facingMode:{ideal:'environment'},
+      width:{ideal:1280},
+      height:{ideal:1280}
+    }
+  });
+  video.srcObject=cameraStream;
+  await video.play();
+
+  const detector=new BarcodeDetector({formats:['qr_code']});
+  scannerMode='native';
+  scannerBusy=false;
+
+  const scan=async()=>{
+    if(!cameraStream || scannerMode!=='native' || stage.hidden)return;
+    try{
+      if(video.readyState>=2 && video.videoWidth){
+        const codes=await detector.detect(video);
+        if(codes?.length){
+          const value=codes[0].rawValue||'';
+          if(value){await handleScan(value);return}
+        }
+      }
+    }catch(e){console.warn('BarcodeDetector detect',e)}
+    if(cameraStream && scannerMode==='native')
+      nativeScanTimer=requestAnimationFrame(scan);
+  };
+  setScanResult('המצלמה פעילה — מחפש QR…');
+  nativeScanTimer=requestAnimationFrame(scan);
+  return true;
+}
+async function startHtml5Fallback(){
+  if(!window.Html5Qrcode)throw new Error('QR_ENGINE_NOT_LOADED');
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('CAMERA_API_UNAVAILABLE');
+  $('cameraStage').hidden=true;
+  const reader=$('reader');
+  reader.hidden=false;
+  reader.innerHTML='';
+  $('cameraHelp').textContent='אם הדפדפן מבקש הרשאה, בחר אפשר. לאחר מכן כוון אל ה־QR.';
+  const scanner=new Html5Qrcode('reader');
+  qrScanner=scanner;
+  scannerMode='html5';
+  scannerBusy=false;
+
+  let cameras=[];
+  try{cameras=await Html5Qrcode.getCameras()}catch(e){console.warn('getCameras',e)}
+  if(!cameras.length)throw new Error('NO_CAMERA_FOUND');
+
+  // Prefer a rear/environment camera.
+  const preferred=cameras.find(c=>/back|rear|environment|אחור/i.test(c.label))||cameras[cameras.length-1];
+  await scanner.start(
+    preferred.id,
+    {
+      fps:12,
+      qrbox:(vw,vh)=>{
+        const side=Math.max(220,Math.min(360,Math.floor(Math.min(vw,vh)*0.72)));
+        return {width:side,height:side};
+      },
+      aspectRatio:1,
+      disableFlip:false
+    },
+    text=>handleScan(text),
+    ()=>{}
+  );
+  setScanResult('המצלמה פעילה — מחפש QR…');
+  return true;
+}
+async function openScanner(){
+  const modal=$('scannerModal');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  scannerBusy=false;
+  setScanResult('מפעיל מצלמה…');
+  $('cameraStage').hidden=true;
+  $('reader').hidden=true;
+  $('reader').innerHTML='';
+  $('cameraHelp').textContent='בודק את אפשרויות המצלמה…';
+
+  // Let the modal render before opening the camera.
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
+  try{
+    // Chrome/Android: use the native BarcodeDetector first. This avoids a
+    // number of camera-selection issues seen with generic scanner wrappers.
+    const nativeOK=await startNativeBarcodeScanner();
+    if(nativeOK)return;
+  }catch(err){
+    console.warn('Native QR scanner failed',err);
+    clearNativeCamera();
+    if(err?.name==='NotAllowedError'){
+      setScanResult('הגישה למצלמה נחסמה. אשר הרשאת מצלמה ל־GitHub Pages בהגדרות הדפדפן ואז נסה שוב.','error');
+      $('cameraHelp').textContent='אם ההרשאה כבר אושרה, סגור את החלון ופתח אותו שוב.';
+      return;
+    }
+    if(err?.name==='NotFoundError'){
+      setScanResult('לא נמצאה מצלמה זמינה במכשיר.','error');
+      return;
+    }
+  }
+
+  try{
+    await startHtml5Fallback();
+  }catch(err){
+    console.error('Fallback QR scanner failed',err);
+    if(qrScanner){
+      try{await qrScanner.stop()}catch{}
+      qrScanner=null;
+    }
+    $('reader').hidden=true;
+    $('cameraStage').hidden=true;
+    const name=err?.name||'';
+    let msg='לא ניתן להפעיל את המצלמה.';
+    if(name==='NotAllowedError')msg='הגישה למצלמה חסומה. אשר הרשאת מצלמה לאתר ונסה שוב.';
+    else if(name==='NO_CAMERA_FOUND')msg='לא נמצאה מצלמה זמינה.';
+    else if(name==='CAMERA_API_UNAVAILABLE')msg='הדפדפן לא מאפשר גישה למצלמה. פתח את האתר ב־Chrome רגיל.';
+    else if(name==='QR_ENGINE_NOT_LOADED')msg='מנוע הסריקה לא נטען. בדוק חיבור לאינטרנט ונסה שוב.';
+    setScanResult(msg+' אפשר תמיד להשתמש באימות לפי מספר כרטיס.','error');
+    $('cameraHelp').textContent='חשוב: סריקת QR דורשת הרשאת מצלמה. האימות לפי מספר עובד גם ללא מצלמה.';
+  }
+}
+function closeScanner(){
+  clearNativeCamera();
+  const finish=()=>{
+    qrScanner=null;
+    $('reader').innerHTML='';
+    $('reader').hidden=true;
+    $('cameraStage').hidden=true;
+    $('scannerModal').classList.remove('open');
+    $('scannerModal').setAttribute('aria-hidden','true');
+  };
+  if(qrScanner){
+    const s=qrScanner;
+    qrScanner=null;
+    s.stop().catch(()=>{}).finally(finish);
+  }else finish();
+}
+async function verifyManual(){
+  const serial=$('manualSerial').value.trim();
+  if(!/^\d{1,4}$/.test(serial)){
+    setScanResult('הזן מספר כרטיס תקין, למשל 0001.','error');
+    return;
+  }
+  const normalized=serial.padStart(4,'0');
+  const x=historyCache.find(t=>t.serial===normalized);
+  if(!x){
+    setScanResult('הכרטיס לא נמצא במערכת.','error');
+    return;
+  }
+  const result=await verifyTicketData({v:3,serial:x.serial,token:x.token});
+  setScanResult(result.msg,result.ok?'success':'error');
+}
 async function waitForQR(){const box=$('qrcode');for(let i=0;i<80;i++){const c=box?.querySelector('canvas');if(c&&c.width>0&&c.height>0)return true;await new Promise(r=>setTimeout(r,50))}return false}
 async function renderCanvas(){await waitForQR();const ticket=$('ticket');const oldClass=ticket.className,oldW=ticket.style.width,oldH=ticket.style.height;ticket.classList.add('export-mobile');ticket.style.width='1080px';ticket.style.height='1920px';await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(document.fonts?.ready)await document.fonts.ready;const imgs=[...ticket.querySelectorAll('img')];await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=img.onerror=res})));const canvas=await html2canvas(ticket,{scale:1,width:1080,height:1920,useCORS:true,backgroundColor:null,logging:false,imageTimeout:15000,foreignObjectRendering:false});ticket.className=oldClass;ticket.style.width=oldW;ticket.style.height=oldH;return canvas}
 async function downloadPNG(){try{const c=await renderCanvas();const a=document.createElement('a');a.download=($('serial').value||'ticket')+'.png';a.href=c.toDataURL('image/png');a.click();toast('הכרטיס הורד עם QR גדול וברור')}catch(e){console.error(e);status('לא ניתן ליצור את הכרטיס',true)}}
 async function downloadPDF(){try{const c=await renderCanvas(),img=c.toDataURL('image/png'),{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:[90,160],compress:true});pdf.addImage(img,'PNG',0,0,90,160,undefined,'FAST');pdf.save(($('serial').value||'ticket')+'.pdf');toast('PDF נוצר')}catch(e){console.error(e);status('לא ניתן ליצור PDF',true)}}
 async function printTicket(){try{const c=await renderCanvas(),img=c.toDataURL('image/png'),w=window.open('','_blank');if(!w){status('הדפדפן חסם חלון הדפסה',true);return}w.document.write(`<html dir="rtl"><head><title>${esc($('serial').value)}</title><style>@page{size:90mm 160mm;margin:0}html,body{margin:0;width:90mm;height:160mm}img{width:90mm;height:160mm;display:block}</style></head><body><img src="${img}" onload="setTimeout(function(){window.print()},300)"></body></html>`);w.document.close()}catch(e){console.error(e);status('לא ניתן להדפיס',true)}}
 function openSite(){window.open('https://admorhayayin.co.il/','_blank','noopener')}
-async function cleanupOldServiceWorker(){try{const regs=await navigator.serviceWorker?.getRegistrations?.();if(regs?.length){for(const r of regs)await r.unregister();const keys=await caches?.keys?.();if(keys)for(const k of keys)await caches.delete(k);if(!safeLocalGet('sw_cleanup_v7')){safeLocalSet('sw_cleanup_v7','1');location.reload();return true}}}catch(e){console.warn('SW cleanup',e)}return false}
+async function cleanupOldServiceWorker(){try{const regs=await navigator.serviceWorker?.getRegistrations?.();if(regs?.length){for(const r of regs)await r.unregister();const keys=await caches?.keys?.();if(keys)for(const k of keys)await caches.delete(k);if(!safeLocalGet('sw_cleanup_v10')){safeLocalSet('sw_cleanup_v10','1');location.reload();return true}}}catch(e){console.warn('SW cleanup',e)}return false}
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveTicket()}if(e.key.toLowerCase()==='n'&&document.activeElement?.tagName!=='INPUT'&&document.activeElement?.tagName!=='TEXTAREA')newTicket();if(e.key==='Escape'&&$('scannerModal').classList.contains('open'))closeScanner()});
 window.addEventListener('beforeunload',()=>{
   if(draftPending && !editingSerial) saveDraft();
