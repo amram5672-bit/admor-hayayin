@@ -1633,7 +1633,7 @@ function makeQR(){
   let token=$('ticketToken').value;
   if(!token){token=randomToken();$('ticketToken').value=token}
   // Keep the encoded value intentionally short for reliable phone-camera scanning.
-  const text='WF26|'+serial+'|'+token;
+  const text='WF26|'+serial+'|'+token+'|'+typeCode($('type').value);
   const my=++qrRenderToken;
   box.innerHTML='';
   box.dataset.qrValue=text;
@@ -1667,6 +1667,109 @@ function makeQR(){
   }
 }
 
+
+/* ===== SUPABASE CLOUD STORAGE =====
+   Publishable key is safe for browser use. Never put a service_role/secret key here.
+*/
+const SUPABASE_URL='https://iklattjtillfgicbalvw.supabase.co';
+const SUPABASE_KEY='sb_publishable_YToeFaf4-iV3TYZPCXkE4g_RKsUb0Ux';
+const SUPABASE_TICKETS_URL=SUPABASE_URL+'/rest/v1/tickets';
+
+function typeCode(type){
+  return type==='מארז'?'M':type==='כניסה'?'E':'S';
+}
+function codeType(code){
+  return code==='M'?'מארז':code==='E'?'כניסה':'ספר';
+}
+function buildCloudQR(item){
+  return 'WF26|'+String(item.serial).padStart(4,'0')+'|'+String(item.token||'')+'|'+typeCode(item.type);
+}
+function cloudHeaders(extra={}){
+  return Object.assign({
+    'apikey':SUPABASE_KEY,
+    'Authorization':'Bearer '+SUPABASE_KEY,
+    'Content-Type':'application/json',
+    'Accept':'application/json'
+  },extra);
+}
+async function cloudInsertTicket(item){
+  const qr=buildCloudQR(item);
+  const row={full_name:item.name,phone:item.phone||'',qr_token:qr};
+  const res=await fetch(SUPABASE_TICKETS_URL,{
+    method:'POST',
+    headers:cloudHeaders({'Prefer':'return=minimal'}),
+    body:JSON.stringify(row),
+    cache:'no-store'
+  });
+  if(!res.ok){
+    let detail='';
+    try{detail=await res.text()}catch{}
+    const err=new Error('SUPABASE_INSERT_'+res.status);
+    err.status=res.status;err.detail=detail;
+    throw err;
+  }
+  return true;
+}
+async function cloudFetchTickets(){
+  const res=await fetch(SUPABASE_TICKETS_URL+'?select=id,created_at,full_name,phone,qr_token&order=created_at.desc',{
+    method:'GET',headers:cloudHeaders(),cache:'no-store'
+  });
+  if(!res.ok){
+    let detail='';
+    try{detail=await res.text()}catch{}
+    const err=new Error('SUPABASE_SELECT_'+res.status);
+    err.status=res.status;err.detail=detail;
+    throw err;
+  }
+  const rows=await res.json();
+  return (Array.isArray(rows)?rows:[]).map(row=>{
+    const parts=String(row.qr_token||'').split('|');
+    const serial=/^\d{4}$/.test(parts[1]||'')?parts[1]:'';
+    const token=parts[2]||'';
+    const type=codeType(parts[3]);
+    if(!serial)return null;
+    return {
+      name:row.full_name||'',
+      phone:row.phone||'',
+      type,
+      serial,
+      token,
+      created:row.created_at||new Date().toISOString(),
+      entered:false,
+      enteredAt:null,
+      cloudId:row.id
+    };
+  }).filter(Boolean);
+}
+async function cloudSaveEntry(item){
+  /* With the current schema there is no entered column. Keep entry state
+     locally for now; the central registration itself is stored in Supabase. */
+  return true;
+}
+function cloudErrorMessage(err){
+  if(err?.status===401||err?.status===403)
+    return 'Supabase דחה את ההרשאה. בדוק את RLS Policy של INSERT בטבלת tickets.';
+  if(err?.status>=500)return 'Supabase לא זמין כרגע. הכרטיס נשמר מקומית.';
+  return 'לא ניתן לשמור כרגע ב־Supabase. הכרטיס נשמר מקומית.';
+}
+async function syncCloudHistory(){
+  try{
+    const remote=await cloudFetchTickets();
+    if(remote.length){
+      historyCache=mergeHistories(remote,historyCache);
+      for(const ticket of historyCache) await putTicketDB(ticket);
+      safeLocalSet(HISTORY_KEY,JSON.stringify(historyCache));
+      renderHistory();updateCount();
+    }
+    $('storageStat').textContent='✓ Supabase + מכשיר';
+    return true;
+  }catch(err){
+    console.warn('Supabase history sync:',err);
+    $('storageStat').textContent='✓ נשמר במכשיר · ענן לא מסונכרן';
+    return false;
+  }
+}
+
 async function saveTicket(){
   if(!storageReady){
     status('המערכת עדיין טוענת את ההיסטוריה. נסה שוב בעוד רגע.',true);
@@ -1679,8 +1782,6 @@ async function saveTicket(){
     return;
   }
 
-  // Every click on "הנפק" from a fresh form creates a NEW ticket.
-  // Only an explicit "טען" from history can update an existing ticket.
   let serial=d.serial;
   const exists=historyCache.some(x=>x.serial===serial);
   const isNew=(!editingSerial || draftPending || !exists || editingSerial!==serial);
@@ -1703,6 +1804,23 @@ async function saveTicket(){
     enteredAt:old?.enteredAt||null
   };
 
+  /*
+    Cloud-first for new registrations:
+    1. Write the complete registration to Supabase.
+    2. Only after a successful cloud write, keep the local copy.
+    This prevents a "successful" ticket from silently existing only on the phone.
+  */
+  if(isNew){
+    try{
+      await cloudInsertTicket(item);
+    }catch(err){
+      console.error('Supabase INSERT failed:',err);
+      status(cloudErrorMessage(err),true);
+      toast('הכרטיס לא הונפק בענן');
+      return;
+    }
+  }
+
   const ok=await persistOneTicket(item);
   if(ok){
     draftPending=false;
@@ -1712,11 +1830,12 @@ async function saveTicket(){
     renderHistory();
     updateCount();
     makeQR();
-    status('✓ הכרטיס נשמר בהיסטוריה · סה״כ '+historyCache.length+' כרטיסים');
-    toast('הכרטיס '+serial+' נוסף להיסטוריה');
+    $('storageStat').textContent='✓ Supabase + מכשיר';
+    status('✓ הכרטיס נשמר ב־Supabase ובהיסטוריה · סה״כ '+historyCache.length+' כרטיסים');
+    toast('הכרטיס '+serial+' נוסף בהצלחה');
   }else{
-    status('⚠ הכרטיס הוצג אך השמירה נכשלה',true);
-    toast('השמירה נכשלה');
+    status('הכרטיס נשמר ב־Supabase אך השמירה המקומית נכשלה. אל תנפיק שוב את אותו כרטיס.',true);
+    toast('הכרטיס נשמר בענן');
   }
 }
 function loadTicketBySerial(serial){
@@ -1823,6 +1942,8 @@ function decodeQR(text){
   const t=String(text||'').trim();
   if(t.startsWith('WF26|')){
     const a=t.split('|');
+    if(a.length===4 && /^\d{4}$/.test(a[1]) && /^[A-Za-z0-9]+$/.test(a[2]) && /^[SME]$/.test(a[3]))
+      return{v:4,event:'WINE-FEST-2026',serial:a[1],token:a[2],type:codeType(a[3])};
     if(a.length===3 && /^\d{4}$/.test(a[1]) && /^[A-Za-z0-9]+$/.test(a[2]))
       return{v:3,event:'WINE-FEST-2026',serial:a[1],token:a[2]};
   }
@@ -2069,6 +2190,7 @@ window.addEventListener('beforeunload',()=>{
   if(draftPending && !editingSerial) saveDraft();
 });
 (async function init(){document.getElementById('brandLogo').src=LOGO;document.getElementById('book').src=BOOK;const cleaned=await cleanupOldServiceWorker();if(cleaned)return;await hydrateStorage();
+await syncCloudHistory();
 draftPending=true;
 editingSerial=null;
 safeLocalRemove(DRAFT_KEY);
