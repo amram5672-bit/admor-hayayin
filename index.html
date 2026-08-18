@@ -169,8 +169,8 @@ input:focus,select:focus{
 .security{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
 .serial{font-family:ui-monospace,SFMono-Regular,monospace;color:#e8cf74;font-size:11px;letter-spacing:.4px}
 .security-sub{font-size:9px;color:#81766d;margin-top:4px}
-.qr{width:91px;height:91px;padding:7px;border-radius:9px;background:#fff;display:grid;place-items:center;box-shadow:0 8px 18px rgba(0,0,0,.25)}
-.qr canvas,.qr img{width:77px!important;height:77px!important}
+.qr{width:124px;height:124px;padding:9px;border-radius:9px;background:#fff;display:grid;place-items:center;box-shadow:0 8px 18px rgba(0,0,0,.25)}
+.qr canvas,.qr img{width:106px!important;height:106px!important}
 .holo{position:absolute;right:10px;top:42px;width:5px;height:92px;border-radius:5px;background:linear-gradient(180deg,#fff,#d4af37,#9be3ff,#fff,#d4af37);opacity:.55;box-shadow:0 0 12px rgba(255,255,255,.35)}
 .tear{position:absolute;bottom:0;left:0;right:0;border-top:1px dashed rgba(236,213,138,.4);z-index:2}
 
@@ -810,22 +810,26 @@ button,input,select{min-height:44px}
     color:#fff;
   }
   tbody td:nth-child(2){
+    color:#bcae9f;
+    font-size:9px;
+  }
+  tbody td:nth-child(3){
     color:#d8c58f;
     font-size:10px;
   }
-  tbody td:nth-child(3){
+  tbody td:nth-child(4){
     font-family:ui-monospace,monospace;
     font-size:10px;
     color:#a99d90;
   }
-  tbody td:nth-child(4){
+  tbody td:nth-child(5){
     font-size:9px;
   }
-  tbody td:nth-child(5){
+  tbody td:nth-child(6){
     font-size:8px;
     color:#776d66;
   }
-  tbody td:nth-child(6){
+  tbody td:nth-child(7){
     grid-column:1/-1;
     margin-top:3px;
   }
@@ -985,19 +989,19 @@ button,input,select{min-height:44px}
 
   .qr{
     flex:none!important;
-    width:76px!important;
-    height:76px!important;
+    width:104px!important;
+    height:104px!important;
   }
 
   .qr canvas,.qr img{
     display:block!important;
-    width:66px!important;
-    height:66px!important;
+    width:92px!important;
+    height:92px!important;
   }
 
   /* Slightly taller mobile card so the complete composition breathes */
   .ticket{
-    max-width:360px!important;
+    max-width:390px!important;
     margin:0 auto!important;
   }
 }
@@ -1156,8 +1160,8 @@ html body .ticket.export-mobile .security{
   margin-top:auto!important;
   padding-top:30px!important;
   width:100%!important;
-  min-height:290px!important;
-  height:290px!important;
+  min-height:410px!important;
+  height:410px!important;
   display:flex!important;
   align-items:flex-end!important;
   justify-content:space-between!important;
@@ -1177,20 +1181,20 @@ html body .ticket.export-mobile .security-sub{
 }
 
 html body .ticket.export-mobile .qr{
-  width:250px!important;
-  height:250px!important;
-  min-width:250px!important;
-  min-height:250px!important;
-  flex:0 0 250px!important;
-  padding:16px!important;
+  width:440px!important;
+  height:440px!important;
+  min-width:440px!important;
+  min-height:440px!important;
+  flex:0 0 440px!important;
+  padding:20px!important;
   overflow:visible!important;
 }
 
 html body .ticket.export-mobile .qr canvas,
 html body .ticket.export-mobile .qr img{
   display:block!important;
-  width:218px!important;
-  height:218px!important;
+  width:400px!important;
+  height:400px!important;
   max-width:none!important;
   max-height:none!important;
 }
@@ -1261,10 +1265,11 @@ html body .ticket.export-mobile .holo{z-index:3!important}
       <div class="field serial-box">
         <label for="serial">מספר כרטיס</label>
         <input id="serial" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" readonly aria-readonly="true" aria-label="מספר כרטיס">
+        <input id="ticketToken" type="hidden">
         <button class="copy-mini" onclick="copySerial()">העתק</button>
       </div>
 
-      <div class="download-note">הכרטיס שיורד מותאם למסך טלפון ביחס 9:16, כולל QR גדול וברור לסריקה בכניסה.</div>
+      <div class="download-note">הכרטיס שיורד מותאם למסך טלפון ביחס 9:16, כולל QR גדול וברור לסריקה בכניסה. הכרטיס נשמר כקובץ 1080×1920.</div>
       <div class="actions">
         <button class="btn btn-primary" onclick="saveTicket()">✓ שמור והנפק</button>
         <button class="btn btn-secondary" onclick="newTicket()">＋ חדש</button>
@@ -1334,13 +1339,13 @@ html body .ticket.export-mobile .holo{z-index:3!important}
             <input id="historySearch" class="history-search" placeholder="חיפוש לפי שם / מספר..." aria-label="חיפוש בהיסטוריה">
             <div class="stats" style="margin-top:7px;justify-content:flex-start">
               <span class="stat" id="countStat">0 כרטיסים</span>
-              <span class="stat">נשמר מקומית</span>
+              <span class="stat" id="storageStat">שומר במכשיר</span>
             </div>
           </div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>שם</th><th>סוג</th><th>סידורי</th><th>סטטוס</th><th>נוצר</th><th>פעולות</th></tr></thead>
+            <thead><tr><th>שם רוכש</th><th>טלפון</th><th>סוג</th><th>סידורי</th><th>סטטוס</th><th>נוצר</th><th>פעולות</th></tr></thead>
             <tbody id="historyBody"></tbody>
           </table>
         </div>
@@ -1378,297 +1383,290 @@ document.getElementById('brandLogo').src=LOGO;
 document.getElementById('book').src=BOOK;
 
 const $=id=>document.getElementById(id);
-const DRAFT_KEY='wine_festival_draft_v5';
-const HISTORY_KEY='wine_festival_history_v5';
-const COUNTER_KEY='wine_festival_counter_v5';
-const EVENT={
-  title:'פסטיבל היין והשקת ספר היין',
-  subtitle:'מהאדמה לנשמה',
-  date:'29/09/2026',
-  time:'17:00',
-  day:'יום שלישי · חול המועד סוכות',
-  venue:'מלון ירמיהו',
-  address:'רחוב ירמיהו 33, ירושלים'
-};
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2200)}
-function status(t,error=false){$('statusText').textContent=t;$('status').classList.toggle('error',error);$('status').classList.add('show');clearTimeout(window.__status);window.__status=setTimeout(()=>$('status').classList.remove('show'),3200)}
-function nextSerial(){
-  const n=Number(localStorage.getItem(COUNTER_KEY)||0)+1;
-  localStorage.setItem(COUNTER_KEY,String(n));
-  return String(n).padStart(4,'0');
-}
-function getHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{return[]}}
-function payload(){
-  return {name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value};
-}
-function saveDraft(){localStorage.setItem(DRAFT_KEY,JSON.stringify(payload()))}
-function loadDraft(){
-  try{
-    const d=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null'); if(!d)return false;
-    ['name','phone'].forEach(k=>$(k).value=d[k]||'');
-    $('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';
-    $('serial').value=/^\d{4}$/.test(d.serial||'')?d.serial:nextSerial();
-    return !!d.serial;
-  }catch{return false}
-}
-function newTicket(){
-  ['name','phone'].forEach(id=>$(id).value='');
-  $('type').value='ספר'; $('serial').value=nextSerial();
-  saveDraft(); update(); focusName(); status('כרטיס חדש מוכן למילוי');
-}
-function focusName(){$('name').focus();$('name').scrollIntoView({behavior:'smooth',block:'center'})}
-function update(){
-  const d=payload();
-  $('pname').textContent=d.name||'שם האורח';
-  $('ptype').textContent=d.type||'כולל ספר';
-  $('pserial').textContent=d.serial||'0000';
-  $('previewSerial').textContent=d.serial||'0000';
-  saveDraft(); makeQR();
-}
-['name','phone','type'].forEach(id=>{$(id).addEventListener('input',update);$(id).addEventListener('change',update)});
-async function signature(data){
-  const raw=JSON.stringify({name:data.name,type:data.type,serial:data.serial})+'|WINE-FEST-2026';
-  if(window.crypto?.subtle){
-    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));
-    return [...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('').slice(0,24);
-  }
-  let h=2166136261; for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
-  return (h>>>0).toString(16).padStart(8,'0').repeat(3).slice(0,24);
-}
-let qrToken=0;
-async function makeQR(){
-  if(!window.QRCode)return;
-  const token=++qrToken,d=payload(),sig=await signature(d); if(token!==qrToken)return;
-  const qrData={v:1,event:'WINE-FEST-2026',name:d.name,type:d.type,serial:d.serial,sig};
-  const text='WINEFEST|'+btoa(unescape(encodeURIComponent(JSON.stringify(qrData))));
-  $('qrcode').innerHTML='';
-  new QRCode($('qrcode'),{text,width:280,height:280,colorDark:'#111',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.H});
-}
-function saveTicket(){
-  const d=payload();
-  if(!d.name){status('יש להזין שם מלא לפני ההנפקה',true);focusName();return}
-  const h=getHistory().filter(x=>x.serial!==d.serial);
-  const old=h.find(x=>x.serial===d.serial);
-  h.unshift({...d,created:old?.created||new Date().toISOString(),entered:old?.entered||false,enteredAt:old?.enteredAt||null});
-  localStorage.setItem(HISTORY_KEY,JSON.stringify(h.slice(0,500)));
-  renderHistory(); status('הכרטיס נשמר והונפק בהצלחה'); toast('הכרטיס הונפק');
-}
-function loadTicket(i){
-  const x=getFilteredHistory()[i]; if(!x)return;
-  ['name','phone','serial'].forEach(k=>$(k).value=x[k]||'');
-  $('type').value=x.type||'ספר'; update();
-  status(x.entered?'הכרטיס נטען · הכניסה כבר סומנה':'הכרטיס נטען לעריכה'); window.scrollTo({top:0,behavior:'smooth'});
-}
-function duplicateTicket(i){
-  const x=getFilteredHistory()[i]; if(!x)return;
-  ['name','phone'].forEach(k=>$(k).value=x[k]||'');
-  $('type').value=x.type||'ספר'; $('serial').value=nextSerial(); update();
-  status('נוצר עותק חדש עם מספר סידורי חדש'); focusName();
-}
-function deleteTicket(serial){
-  if(!confirm('למחוק את הכרטיס '+serial+' מההיסטוריה?'))return;
-  localStorage.setItem(HISTORY_KEY,JSON.stringify(getHistory().filter(x=>x.serial!==serial)));
-  renderHistory(); toast('הכרטיס נמחק');
-}
-function clearHistory(){
-  if(!getHistory().length)return;
-  if(confirm('למחוק את כל היסטוריית ההנפקות?')){
-    localStorage.removeItem(HISTORY_KEY); renderHistory(); status('ההיסטוריה נמחקה');
-  }
-}
-function getFilteredHistory(){
-  const q=($('historySearch').value||'').trim().toLowerCase(),h=getHistory();
-  if(!q)return h;
-  return h.filter(x=>[x.name,x.serial,x.type,x.entered?'נכנס':'טרם נכנס'].join(' ').toLowerCase().includes(q));
-}
-function renderHistory(){
-  const h=getFilteredHistory(); $('countStat').textContent=getHistory().length+' כרטיסים';
-  $('historyBody').innerHTML=h.length?h.map((x,i)=>`<tr>
-    <td>${esc(x.name)}</td><td>${esc(x.type)}</td>
-    <td style="font-family:ui-monospace;font-size:10px">${esc(x.serial)}</td>
-    <td><span class="entry-status ${x.entered?'entered':'pending'}">${x.entered?'✓ נכנס':'טרם נכנס'}</span></td>
-    <td>${formatDate(x.created)}</td>
-    <td><div class="row-actions">
-      <button class="tiny" onclick="loadTicket(${i})">טען</button>
-      <button class="tiny" onclick="duplicateTicket(${i})">שכפל</button>
-      <button class="tiny" onclick="deleteTicket('${esc(x.serial)}')">מחק</button>
-    </div></td>
-  </tr>`).join(''):'<tr><td colspan="6" class="empty">אין כרטיסים להצגה</td></tr>';
-}
-function formatDate(iso){
-  if(!iso)return '—';
-  try{return new Intl.DateTimeFormat('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso))}
-  catch{return '—'}
-}
-$('historySearch').addEventListener('input',renderHistory);
-async function copySerial(){
-  try{await navigator.clipboard.writeText($('serial').value);toast('המספר הסידורי הועתק')}
-  catch{toast('לא ניתן להעתיק אוטומטית בדפדפן זה')}
-}
-function phoneIntl(p){
-  p=(p||'').replace(/\D/g,'');
-  if(p.startsWith('0'))return '972'+p.slice(1);
-  if(p.startsWith('972'))return p;
-  return p;
-}
-function phoneIntl(p){
-  p=(p||'').replace(/\D/g,'');
-  if(p.startsWith('0'))return '972'+p.slice(1);
-  if(p.startsWith('972'))return p;
-  return p;
-}
-function sendWhatsApp(){
-  const d=payload();
-  if(!d.name||!d.phone){status('יש להזין שם ומספר טלפון',true);return}
-  const text=`שלום ${d.name},\n\nזהו הכרטיס האישי שלך ל${EVENT.title}.\n\nסוג כרטיס: ${d.type}\n\n${EVENT.day}\n${EVENT.date} · ${EVENT.time}\n${EVENT.venue}, ${EVENT.address}\n\nיש להציג את הכרטיס בכניסה. הצמיד יינתן במקום.\n\nמספר כרטיס: ${d.serial}\n\nאדמו"ר היין 🍷`;
-  window.open('https://wa.me/'+phoneIntl(d.phone)+'?text='+encodeURIComponent(text),'_blank','noopener');
-}
-
+const DRAFT_KEY='wine_festival_draft_v7';
+const HISTORY_KEY='wine_festival_history_v7';
+const LEGACY_KEYS=['wine_festival_history_v6','wine_festival_history_v5'];
+const COUNTER_KEY='wine_festival_counter_v7';
+const DB_NAME='AdmorHayayinDB';
+const DB_STORE='app';
+const APP_VERSION='8.0.0';
+let historyCache=[];
+let dbPromise=null;
+let storageReady=false;
+let qrRenderToken=0;
 let qrScanner=null;
-function openScanner(){
-  $('scannerModal').classList.add('open'); $('scannerModal').setAttribute('aria-hidden','false');
-  $('scanResult').className='scan-result'; $('scanResult').textContent='מוכן לסריקה…';
-  setTimeout(()=>{
-    if(!window.Html5Qrcode){$('scanResult').className='scan-result error';$('scanResult').textContent='לא ניתן לטעון את מצלמת ה־QR. אפשר להשתמש בשדה המספר הסידורי.';return}
-    qrScanner=new Html5Qrcode('reader');
-    qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},
-      text=>handleScan(text),
-      ()=>{}
-    ).catch(()=>{$('scanResult').textContent='המצלמה לא זמינה. אפשר להזין מספר סידורי ידנית.';});
-  },100);
+let draftPending=false;
+let editingSerial=null;
+const EVENT={title:'פסטיבל היין והשקת ספר היין',subtitle:'מהאדמה לנשמה',date:'29/09/2026',time:'17:00',day:'יום שלישי · חול המועד סוכות',venue:'מלון ירמיהו',address:'רחוב ירמיהו 33, ירושלים'};
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function toast(t){const el=$('toast');if(!el)return;el.textContent=t;el.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>el.classList.remove('show'),2400)}
+function status(t,error=false){$('statusText').textContent=t;$('status').classList.toggle('error',error);$('status').classList.add('show');clearTimeout(window.__status);window.__status=setTimeout(()=>$('status').classList.remove('show'),3800)}
+function randomToken(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out='';
+  if(window.crypto?.getRandomValues){
+    const b=new Uint32Array(8); crypto.getRandomValues(b);
+    for(let i=0;i<8;i++) out+=chars[b[i]%chars.length];
+  }else{
+    for(let i=0;i<8;i++) out+=chars[Math.floor(Math.random()*chars.length)];
+  }
+  return out;
 }
-function closeScanner(){
-  const finish=()=>{qrScanner=null;$('reader').innerHTML='';$('scannerModal').classList.remove('open');$('scannerModal').setAttribute('aria-hidden','true')};
-  if(qrScanner){qrScanner.stop().then(finish).catch(finish)}else finish();
-}
-function decodeQR(text){
+function safeLocalGet(k,f=null){try{const v=localStorage.getItem(k);return v===null?f:v}catch{return f}}
+function safeLocalSet(k,v){try{localStorage.setItem(k,v);return true}catch{return false}}
+function safeLocalRemove(k){try{localStorage.removeItem(k);return true}catch{return false}}
+function openDB(){if(dbPromise)return dbPromise;if(!('indexedDB' in window))return Promise.resolve(null);dbPromise=new Promise(resolve=>{try{const req=indexedDB.open(DB_NAME,3);req.onupgradeneeded=()=>{
+  const db=req.result;
+  if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE);
+  if(!db.objectStoreNames.contains('tickets'))db.createObjectStore('tickets');
+};req.onsuccess=()=>resolve(req.result);req.onerror=()=>resolve(null)}catch{resolve(null)}});return dbPromise}
+async function idbGet(k){const db=await openDB();if(!db)return null;return new Promise(resolve=>{try{const r=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(k);r.onsuccess=()=>resolve(r.result??null);r.onerror=()=>resolve(null)}catch{resolve(null)}})}
+async function idbSet(k,v){const db=await openDB();if(!db)return false;return new Promise(resolve=>{try{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(v,k);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false)}catch{resolve(false)}})}
+async function idbRemove(k){const db=await openDB();if(!db)return false;return new Promise(resolve=>{try{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(k);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false)}catch{resolve(false)}})}
+function normalizeHistory(list){return (Array.isArray(list)?list:[]).map(x=>({...x,serial:String(x.serial||'').padStart(4,'0'),token:x.token||randomToken(),entered:!!x.entered,enteredAt:x.enteredAt||null,created:x.created||new Date().toISOString(),phone:x.phone||''})).filter(x=>/^\d{4}$/.test(x.serial))}
+function mergeHistories(...lists){const map=new Map();for(const list of lists)for(const x of normalizeHistory(list)){const old=map.get(x.serial);if(!old||new Date(x.created)>new Date(old.created))map.set(x.serial,x)}return [...map.values()].sort((a,b)=>new Date(b.created)-new Date(a.created)).slice(0,1000)}
+function getHistory(){return historyCache.slice()}
+async function persistHistory(list){
+  const normalized=mergeHistories(list);
+  historyCache=normalized.slice(0,1000);
+  const json=JSON.stringify(historyCache);
+  const localOK=safeLocalSet(HISTORY_KEY,json);
+  let idbOK=false;
   try{
-    if(!text.startsWith('WINEFEST|'))return null;
-    return JSON.parse(decodeURIComponent(escape(atob(text.slice(9)))));
-  }catch{return null}
+    idbOK=await idbSet(HISTORY_KEY,historyCache);
+    // Also store every ticket separately in a dedicated object store when available.
+    const db=await openDB();
+    if(db && db.objectStoreNames.contains('tickets')){
+      await new Promise(resolve=>{
+        try{
+          const tx=db.transaction('tickets','readwrite');
+          const store=tx.objectStore('tickets');
+          for(const ticket of historyCache) store.put(ticket,ticket.serial);
+          tx.oncomplete=()=>resolve();
+          tx.onerror=()=>resolve();
+          tx.onabort=()=>resolve();
+        }catch{resolve()}
+      });
+    }
+  }catch{}
+  $('storageStat').textContent=(localOK||idbOK)?'✓ נשמר במכשיר':'⚠ לא ניתן לשמור';
+  return localOK||idbOK;
 }
-async function verifyTicketData(data){
-  if(!data?.serial)return {ok:false,msg:'QR לא תקין או אינו שייך לפסטיבל.'};
-  const h=getHistory(),idx=h.findIndex(x=>x.serial===data.serial);
-  if(idx<0)return {ok:false,msg:'הכרטיס לא נמצא במערכת ההנפקות המקומית.'};
-  const x=h[idx];
-  const expected=await signature({name:data.name,type:data.type,serial:data.serial});
-  if(data.sig!==expected)return {ok:false,msg:'החתימה של הכרטיס אינה תקינה.'};
-  if(x.entered)return {ok:true,already:true,msg:`הכרטיס של ${x.name} כבר סומן כ״נכנס״ בתאריך ${formatDate(x.enteredAt)}.`};
-  h[idx]={...x,entered:true,enteredAt:new Date().toISOString()};
-  localStorage.setItem(HISTORY_KEY,JSON.stringify(h));
+async function hydrateStorage(){
+  let lists=[];
+  try{
+    const raw=safeLocalGet(HISTORY_KEY,'[]');
+    if(raw)lists.push(JSON.parse(raw));
+  }catch{}
+  for(const key of LEGACY_KEYS){
+    try{
+      const raw=safeLocalGet(key,'[]');
+      if(raw)lists.push(JSON.parse(raw));
+    }catch{}
+  }
+  try{
+    const indexed=await idbGet(HISTORY_KEY);
+    if(indexed)lists.push(indexed);
+  }catch{}
+  try{
+    const db=await openDB();
+    if(db && db.objectStoreNames.contains('tickets')){
+      const rows=await new Promise(resolve=>{
+        try{
+          const req=db.transaction('tickets','readonly').objectStore('tickets').getAll();
+          req.onsuccess=()=>resolve(req.result||[]);
+          req.onerror=()=>resolve([]);
+        }catch{resolve([])}
+      });
+      if(rows.length)lists.push(rows);
+    }
+  }catch{}
+  historyCache=mergeHistories(...lists);
+  await persistHistory(historyCache);
+  storageReady=true;
   renderHistory();
-  return {ok:true,msg:`✓ הכניסה אושרה — ${x.name}`,name:x.name,type:x.type,serial:x.serial};
+  updateCount();
+  return historyCache;
 }
-async function handleScan(text){
-  const data=decodeQR(text);
-  const result=await verifyTicketData(data);
-  const el=$('scanResult');
-  el.className='scan-result '+(result.ok?'success':'error');
-  el.textContent=result.msg;
-  if(result.ok&&!result.already){toast('הכניסה נרשמה בהצלחה');}
+function nextSerial(){const used=new Set(historyCache.map(x=>Number(x.serial)));let n=Number(safeLocalGet(COUNTER_KEY,'0'))||0;while(used.has(n+1))n++;n++;if(n>9999)n=1;while(used.has(n))n++;safeLocalSet(COUNTER_KEY,String(n));return String(n).padStart(4,'0')}
+function payload(){return{name:$('name').value.trim(),phone:$('phone').value.trim(),type:$('type').value,serial:$('serial').value,token:$('ticketToken').value||''}}
+function saveDraft(){const d=payload();safeLocalSet(DRAFT_KEY,JSON.stringify(d));idbSet(DRAFT_KEY,d)}
+async function loadDraft(){let d=null;try{const raw=safeLocalGet(DRAFT_KEY,null);if(raw)d=JSON.parse(raw)}catch{}if(!d){const x=await idbGet(DRAFT_KEY);if(x)d=x}if(!d)return false;$('name').value=d.name||'';$('phone').value=d.phone||'';$('type').value=['ספר','מארז','כניסה'].includes(d.type)?d.type:'ספר';$('serial').value=/^\d{4}$/.test(d.serial||'')?d.serial:nextSerial();$('ticketToken').value=d.token||randomToken();return true}
+function focusName(){$('name').focus();$('name').scrollIntoView({behavior:'smooth',block:'center'})}
+function newTicket(){
+  draftPending=false;
+  editingSerial=null;
+  ['name','phone'].forEach(id=>$(id).value='');
+  $('type').value='ספר';
+  $('serial').value=nextSerial();
+  $('ticketToken').value=randomToken();
+  safeLocalRemove(DRAFT_KEY);
+  idbRemove(DRAFT_KEY);
+  update();
+  focusName();
+  status('כרטיס חדש מוכן למילוי');
 }
-async function verifyManual(){
-  const serial=$('manualSerial').value.trim();
-  if(!serial){$('scanResult').className='scan-result error';$('scanResult').textContent='יש להזין מספר סידורי.';return}
-  const x=getHistory().find(t=>t.serial===serial);
-  if(!x){$('scanResult').className='scan-result error';$('scanResult').textContent='הכרטיס לא נמצא במערכת.';return}
-  const result=await verifyTicketData({serial,name:x.name,type:x.type,sig:await signature(x)});
-  $('scanResult').className='scan-result '+(result.ok?'success':'error');
-  $('scanResult').textContent=result.msg;
-}
-async function waitForQR(){
+function update(){const d=payload();$('pname').textContent=d.name||'שם האורח';$('ptype').textContent=d.type||'כולל ספר';$('pserial').textContent=d.serial||'0000';$('previewSerial').textContent=d.serial||'0000';saveDraft();makeQR()}
+['name','phone','type'].forEach(id=>{$(id).addEventListener('input',update);$(id).addEventListener('change',update)});
+function makeQR(){
   const box=$('qrcode');
-  for(let i=0;i<60;i++){
-    const qr=box && (box.querySelector('canvas')||box.querySelector('img'));
-    if(qr && qr.width>0 && qr.height>0) return true;
-    await new Promise(r=>setTimeout(r,50));
-  }
-  return false;
-}
-async function renderCanvas(mode='mobile'){
-  await waitForQR();
-  const ticket=$('ticket');
-  const oldClass=ticket.className;
-  const oldWidth=ticket.style.width,oldHeight=ticket.style.height;
-  if(mode==='mobile'){
-    ticket.classList.add('export-mobile');
-    ticket.style.width='1080px';
-    ticket.style.height='1920px';
-  }
-  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-  if(document.fonts?.ready) await document.fonts.ready;
-  const images=[...ticket.querySelectorAll('img')];
-  await Promise.all(images.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve})));
-  await new Promise(r=>setTimeout(r,120));
-  const canvas=await html2canvas(ticket,{
-    scale:1,
-    width:mode==='mobile'?1080:undefined,
-    height:mode==='mobile'?1920:undefined,
-    useCORS:true,
-    backgroundColor:null,
-    logging:false,
-    imageTimeout:15000,
-    foreignObjectRendering:false
-  });
-  ticket.className=oldClass;
-  ticket.style.width=oldWidth;
-  ticket.style.height=oldHeight;
-  return canvas;
-}
-async function downloadPNG(){
+  if(!box||!window.QRCode)return;
+  const serial=$('serial').value||'0000';
+  let token=$('ticketToken').value;
+  if(!token){token=randomToken();$('ticketToken').value=token}
+  // Keep the encoded value intentionally short for reliable phone-camera scanning.
+  const text='WF26|'+serial+'|'+token;
+  const my=++qrRenderToken;
+  box.innerHTML='';
+  box.dataset.qrValue=text;
   try{
-    const c=await renderCanvas('mobile');
-    const a=document.createElement('a');
-    a.download=($('serial').value||'ticket')+'.png';
-    a.href=c.toDataURL('image/png');
-    a.click();
-    toast('כרטיס מובייל באיכות גבוהה נוצר');
+    new QRCode(box,{
+      text,
+      width:600,
+      height:600,
+      colorDark:'#111111',
+      colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.M
+    });
+    requestAnimationFrame(()=>{
+      if(my!==qrRenderToken)return;
+      const c=box.querySelector('canvas');
+      const img=box.querySelector('img');
+      for(const el of [c,img]){
+        if(el){
+          el.style.display='block';
+          el.style.width='100%';
+          el.style.height='100%';
+          el.style.maxWidth='none';
+          el.style.maxHeight='none';
+          el.setAttribute('aria-label','QR '+text);
+        }
+      }
+    });
   }catch(e){
     console.error(e);
-    status('לא ניתן ליצור את כרטיס המובייל בדפדפן זה',true);
+    box.textContent='QR';
   }
 }
-async function downloadPDF(){
-  try{
-    const c=await renderCanvas('mobile');
-    const img=c.toDataURL('image/png');
-    const {jsPDF}=window.jspdf;
-    /* 90×160mm — יחס 9:16, נוח גם להדפסה וגם לשמירה דיגיטלית */
-    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:[90,160],compress:true});
-    pdf.addImage(img,'PNG',0,0,90,160,undefined,'FAST');
-    pdf.save(($('serial').value||'ticket')+'.pdf');
-    toast('PDF מובייל נוצר');
-  }catch(e){
-    console.error(e);
-    status('לא ניתן ליצור PDF בדפדפן זה',true);
+async function saveTicket(){
+  if(!storageReady){
+    status('המערכת עדיין טוענת את ההיסטוריה. נסה שוב בעוד רגע.',true);
+    return;
   }
-}
-async function printTicket(){
-  try{
-    const c=await renderCanvas('mobile'),img=c.toDataURL('image/png'),w=window.open('','_blank');
-    if(!w){status('הדפדפן חסם חלון הדפסה',true);return}
-    w.document.write(`<html dir="rtl"><head><title>${esc($('serial').value)}</title>
-      <style>@page{size:90mm 160mm;margin:0}html,body{margin:0;width:90mm;height:160mm;background:#fff}
-      body{display:flex;align-items:center;justify-content:center}img{width:90mm;height:160mm;display:block}</style>
-      </head><body><img src="${img}" onload="setTimeout(function(){window.print()},300)"></body></html>`);
-    w.document.close();
-  }catch(e){
-    console.error(e);
-    status('לא ניתן להכין את הכרטיס להדפסה',true);
+  const d=payload();
+  if(!d.name){
+    status('יש להזין שם מלא לפני ההנפקה',true);
+    focusName();
+    return;
   }
-}
-function openSite(){window.open('https://admorhayayin.co.il/','_blank','noopener')}
-document.addEventListener('keydown',e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveTicket()}
-  if(e.key.toLowerCase()==='n'&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA')newTicket();
-  if(e.key==='Escape'&&$('scannerModal').classList.contains('open'))closeScanner();
-});
-window.addEventListener('beforeunload',saveDraft);
 
-if(!loadDraft())$('serial').value=nextSerial();
-update();renderHistory();
+  // A fresh form always receives a new serial. Loading an existing ticket is the
+  // only way to edit an existing serial.
+  let serial=d.serial;
+  const alreadyExists=historyCache.some(x=>x.serial===serial);
+  if(draftPending || !editingSerial || (alreadyExists && editingSerial!==serial)){
+    serial=nextSerial();
+    $('serial').value=serial;
+    d.serial=serial;
+    d.token=randomToken();
+    $('ticketToken').value=d.token;
+  }else if(!/^\d{4}$/.test(serial)){
+    serial=nextSerial();
+    $('serial').value=serial;
+    d.serial=serial;
+  }
+
+  const old=historyCache.find(x=>x.serial===serial);
+  const item={
+    ...d,
+    serial,
+    token:d.token||randomToken(),
+    created:old?.created||new Date().toISOString(),
+    entered:old?.entered||false,
+    enteredAt:old?.enteredAt||null
+  };
+
+  const next=old
+    ? historyCache.map(x=>x.serial===serial?item:x)
+    : [item,...historyCache];
+
+  const ok=await persistHistory(next);
+  if(ok){
+    draftPending=false;
+    editingSerial=serial;
+    safeLocalRemove(DRAFT_KEY);
+    await idbRemove(DRAFT_KEY);
+    renderHistory();
+    updateCount();
+    makeQR();
+    status('✓ הכרטיס נשמר בהיסטוריה');
+    toast('הכרטיס נוסף להיסטוריה');
+  }else{
+    status('⚠ הכרטיס הוצג אך השמירה נכשלה',true);
+    toast('השמירה נכשלה');
+  }
+}
+function loadTicketBySerial(serial){
+  const x=historyCache.find(t=>t.serial===serial);
+  if(!x)return;
+  ['name','phone','serial'].forEach(k=>$(k).value=x[k]||'');
+  $('type').value=x.type||'ספר';
+  $('ticketToken').value=x.token||randomToken();
+  draftPending=false;
+  editingSerial=x.serial;
+  update();
+  status(x.entered?'הכרטיס נטען · כבר סומן כנכנס':'הכרטיס נטען לעריכה');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function loadTicket(i){const h=getFilteredHistory(),x=h[i];if(x)loadTicketBySerial(x.serial)}
+function duplicateTicket(i){
+  const h=getFilteredHistory(),x=h[i];
+  if(!x)return;
+  ['name','phone'].forEach(k=>$(k).value=x[k]||'');
+  $('type').value=x.type||'ספר';
+  $('serial').value=nextSerial();
+  $('ticketToken').value=randomToken();
+  draftPending=true;
+  editingSerial=null;
+  update();
+  status('נוצר כרטיס חדש עם מספר סידורי חדש');
+  focusName();
+}
+async function deleteTicket(serial){if(!confirm('למחוק את הכרטיס '+serial+' מההיסטוריה?'))return;await persistHistory(historyCache.filter(x=>x.serial!==serial));renderHistory();updateCount();toast('הכרטיס נמחק')}
+async function clearHistory(){if(!historyCache.length)return;if(confirm('למחוק את כל היסטוריית ההנפקות?')){historyCache=[];safeLocalRemove(HISTORY_KEY);await idbRemove(HISTORY_KEY);safeLocalSet(COUNTER_KEY,'0');renderHistory();updateCount();status('ההיסטוריה נמחקה')}}
+function getFilteredHistory(){const q=($('historySearch').value||'').trim().toLowerCase();if(!q)return historyCache.slice();return historyCache.filter(x=>[x.name,x.phone,x.serial,x.type,x.entered?'נכנס':'טרם נכנס'].join(' ').toLowerCase().includes(q))}
+function updateCount(){$('countStat').textContent=historyCache.length+' כרטיסים'}
+function formatDate(iso){if(!iso)return'—';try{return new Intl.DateTimeFormat('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso))}catch{return'—'}}
+function renderHistory(){const h=getFilteredHistory();updateCount();$('historyBody').innerHTML=h.length?h.map((x,i)=>`<tr><td>${esc(x.name)}</td><td>${esc(x.phone||'—')}</td><td>${esc(x.type)}</td><td style="font-family:ui-monospace;font-size:10px">${esc(x.serial)}</td><td><span class="entry-status ${x.entered?'entered':'pending'}">${x.entered?'✓ נכנס':'טרם נכנס'}</span></td><td>${formatDate(x.created)}</td><td><div class="row-actions"><button class="tiny" onclick="loadTicket(${i})">טען</button><button class="tiny" onclick="duplicateTicket(${i})">שכפל</button><button class="tiny" onclick="deleteTicket('${esc(x.serial)}')">מחק</button></div></td></tr>`).join(''):'<tr><td colspan="7" class="empty">אין כרטיסים להצגה</td></tr>'}
+$('historySearch').addEventListener('input',renderHistory);
+async function copySerial(){try{await navigator.clipboard.writeText($('serial').value);toast('המספר הסידורי הועתק')}catch{toast('לא ניתן להעתיק אוטומטית בדפדפן זה')}}
+function phoneIntl(p){p=(p||'').replace(/\D/g,'');if(p.startsWith('972'))return p;if(p.startsWith('0'))return'972'+p.slice(1);return p}
+function sendWhatsApp(){const d=payload();if(!d.name||!d.phone){status('יש להזין שם ומספר טלפון',true);return}const text=`שלום ${d.name},\n\nזהו הכרטיס האישי שלך ל${EVENT.title}.\n\nסוג כרטיס: ${d.type}\n\n${EVENT.day}\n${EVENT.date} · ${EVENT.time}\n${EVENT.venue}, ${EVENT.address}\n\nיש להציג את הכרטיס בכניסה. הצמיד יינתן במקום.\n\nמספר כרטיס: ${d.serial}\n\nאדמו"ר היין 🍷`;window.open('https://wa.me/'+phoneIntl(d.phone)+'?text='+encodeURIComponent(text),'_blank','noopener')}
+function decodeQR(text){const t=String(text||'').trim();if(t.startsWith('WF26|')){const a=t.split('|');if(a.length===3&&/^\d{4}$/.test(a[1])&&a[2])return{v:3,event:'WINE-FEST-2026',serial:a[1],token:a[2]}}if(t.startsWith('WINEFEST2|')){const a=t.split('|');if(a.length===3)return{v:2,event:'WINE-FEST-2026',serial:a[1],token:a[2]}}if(t.startsWith('WINEFEST|')){try{return JSON.parse(decodeURIComponent(escape(atob(t.slice(9)))))}catch{}}return null}
+async function verifyTicketData(data){if(!data?.serial)return{ok:false,msg:'QR לא תקין.'};const serial=String(data.serial).padStart(4,'0');const x=historyCache.find(t=>t.serial===serial);if(!x)return{ok:false,msg:'הכרטיס לא נמצא בהיסטוריה המקומית.'};if(data.token&&x.token&&data.token!==x.token)return{ok:false,msg:'ה־QR אינו תואם לכרטיס שהונפק.'};if(x.entered)return{ok:true,already:true,msg:`הכרטיס של ${x.name} כבר סומן כנכנס ב־${formatDate(x.enteredAt)}.`};x.entered=true;x.enteredAt=new Date().toISOString();await persistHistory(historyCache);renderHistory();return{ok:true,msg:`✓ הכניסה אושרה — ${x.name}`,name:x.name,type:x.type,serial:x.serial}}
+async function handleScan(text){const result=await verifyTicketData(decodeQR(text));const el=$('scanResult');el.className='scan-result '+(result.ok?'success':'error');el.textContent=result.msg;if(result.ok&&!result.already)toast('הכניסה נרשמה בהצלחה')}
+function openScanner(){$('scannerModal').classList.add('open');$('scannerModal').setAttribute('aria-hidden','false');$('scanResult').className='scan-result';$('scanResult').textContent='מפעיל מצלמה…';setTimeout(()=>{if(!window.Html5Qrcode){$('scanResult').className='scan-result error';$('scanResult').textContent='מנוע הסריקה לא נטען. השתמש באימות לפי מספר כרטיס.';return}qrScanner=new Html5Qrcode('reader');qrScanner.start({facingMode:{ideal:'environment'}},{fps:15,qrbox:{width:300,height:300},aspectRatio:1.0},text=>handleScan(text),()=>{}).catch(err=>{$('scanResult').className='scan-result error';$('scanResult').textContent='לא ניתן להפעיל מצלמה. אפשר להשתמש באימות לפי מספר.';console.error(err)})},120)}
+function closeScanner(){const finish=()=>{qrScanner=null;$('reader').innerHTML='';$('scannerModal').classList.remove('open');$('scannerModal').setAttribute('aria-hidden','true')};if(qrScanner){qrScanner.stop().then(finish).catch(finish)}else finish()}
+async function verifyManual(){const serial=$('manualSerial').value.trim().padStart(4,'0');const x=historyCache.find(t=>t.serial===serial);const el=$('scanResult');if(!x){el.className='scan-result error';el.textContent='הכרטיס לא נמצא במערכת.';return}const result=await verifyTicketData({v:3,serial:x.serial,token:x.token});el.className='scan-result '+(result.ok?'success':'error');el.textContent=result.msg}
+async function waitForQR(){const box=$('qrcode');for(let i=0;i<80;i++){const c=box?.querySelector('canvas');if(c&&c.width>0&&c.height>0)return true;await new Promise(r=>setTimeout(r,50))}return false}
+async function renderCanvas(){await waitForQR();const ticket=$('ticket');const oldClass=ticket.className,oldW=ticket.style.width,oldH=ticket.style.height;ticket.classList.add('export-mobile');ticket.style.width='1080px';ticket.style.height='1920px';await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));if(document.fonts?.ready)await document.fonts.ready;const imgs=[...ticket.querySelectorAll('img')];await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=img.onerror=res})));const canvas=await html2canvas(ticket,{scale:1,width:1080,height:1920,useCORS:true,backgroundColor:null,logging:false,imageTimeout:15000,foreignObjectRendering:false});ticket.className=oldClass;ticket.style.width=oldW;ticket.style.height=oldH;return canvas}
+async function downloadPNG(){try{const c=await renderCanvas();const a=document.createElement('a');a.download=($('serial').value||'ticket')+'.png';a.href=c.toDataURL('image/png');a.click();toast('הכרטיס הורד עם QR גדול וברור')}catch(e){console.error(e);status('לא ניתן ליצור את הכרטיס',true)}}
+async function downloadPDF(){try{const c=await renderCanvas(),img=c.toDataURL('image/png'),{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:[90,160],compress:true});pdf.addImage(img,'PNG',0,0,90,160,undefined,'FAST');pdf.save(($('serial').value||'ticket')+'.pdf');toast('PDF נוצר')}catch(e){console.error(e);status('לא ניתן ליצור PDF',true)}}
+async function printTicket(){try{const c=await renderCanvas(),img=c.toDataURL('image/png'),w=window.open('','_blank');if(!w){status('הדפדפן חסם חלון הדפסה',true);return}w.document.write(`<html dir="rtl"><head><title>${esc($('serial').value)}</title><style>@page{size:90mm 160mm;margin:0}html,body{margin:0;width:90mm;height:160mm}img{width:90mm;height:160mm;display:block}</style></head><body><img src="${img}" onload="setTimeout(function(){window.print()},300)"></body></html>`);w.document.close()}catch(e){console.error(e);status('לא ניתן להדפיס',true)}}
+function openSite(){window.open('https://admorhayayin.co.il/','_blank','noopener')}
+async function cleanupOldServiceWorker(){try{const regs=await navigator.serviceWorker?.getRegistrations?.();if(regs?.length){for(const r of regs)await r.unregister();const keys=await caches?.keys?.();if(keys)for(const k of keys)await caches.delete(k);if(!safeLocalGet('sw_cleanup_v7')){safeLocalSet('sw_cleanup_v7','1');location.reload();return true}}}catch(e){console.warn('SW cleanup',e)}return false}
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveTicket()}if(e.key.toLowerCase()==='n'&&document.activeElement?.tagName!=='INPUT'&&document.activeElement?.tagName!=='TEXTAREA')newTicket();if(e.key==='Escape'&&$('scannerModal').classList.contains('open'))closeScanner()});
+window.addEventListener('beforeunload',()=>{
+  if(draftPending && !editingSerial) saveDraft();
+});
+(async function init(){document.getElementById('brandLogo').src=LOGO;document.getElementById('book').src=BOOK;const cleaned=await cleanupOldServiceWorker();if(cleaned)return;await hydrateStorage();
+draftPending=true;
+editingSerial=null;
+safeLocalRemove(DRAFT_KEY);
+await idbRemove(DRAFT_KEY);
+$('serial').value=nextSerial();
+$('ticketToken').value=randomToken();
+update();$('storageStat').textContent='✓ נשמר במכשיר';if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});})().catch(e=>{console.error(e);storageReady=true;status('אירעה שגיאה בטעינת האפליקציה',true)});
 </script>
 </body>
 </html>
